@@ -12,7 +12,10 @@
     "build": "nest build",
     "start": "node dist/main.js",
     "start:prod": "node dist/main.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit -p tsconfig.test.json",
+    "test:build": "tsc -p tsconfig.test.json",
+    "test": "npm run test:build && node --test .test-dist/src/*.spec.js .test-dist/test/*.e2e-spec.js",
+    "test:e2e": "npm run test:build && node --test .test-dist/test/*.e2e-spec.js"
   },
   "dependencies": {
     "@nestjs/common": "^12.3.2",
@@ -24,6 +27,7 @@
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.24",
+    "@nestjs/testing": "^12.4.0",
     "@types/node": "^24.19.2",
     "typescript": "^5.9.3"
   }

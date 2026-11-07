@@ -47,15 +47,14 @@ $ npm run start:prod
 ## Run tests
 
 ```bash
-# unit tests
+# unit and e2e tests
 $ npm run test
 
 # e2e tests
 $ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
 ```
+
+Tests use Node's built-in test runner and assertions. TypeScript compiles them into `.test-dist` before execution. The e2e test starts the application on an available loopback port and closes it afterward. Run `npm run typecheck` to check both application and test code.
 
 ## Deployment
 
