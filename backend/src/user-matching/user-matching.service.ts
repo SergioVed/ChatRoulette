@@ -28,15 +28,19 @@ export class UserMatchingService {
                 return
             }
 
-            if (waitingClient) {
-                this.partners.set(client, waitingClient)
-                this.partners.set(waitingClient, client)
-            }
+            return this.matchClients(client, waitingClient)
+        }
+    }
 
-            return {
-                initiator: waitingClient,
-                receiver: client
-            }
+    private matchClients (client: WebSocket, waitingClient: WebSocket) {
+        if (waitingClient) {
+            this.partners.set(client, waitingClient)
+            this.partners.set(waitingClient, client)
+        }
+
+        return {
+            initiator: waitingClient,
+            receiver: client
         }
     }
 
