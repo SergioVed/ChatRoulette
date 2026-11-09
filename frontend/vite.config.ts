@@ -7,7 +7,7 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     allowedHosts: [
-      'changelog-focusing-janet-also.trycloudflare.com',
+      'offerings-conclude-vary-stephen.trycloudflare.com',
     ],
   },
 })
