@@ -95,3 +95,16 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+## Authentication setup
+
+Registration and login return only `{ accessToken }`. Tokens use HS256 with the user ID in `sub` and expire after one hour. Passwords use Argon2id (64 MiB memory, three iterations, parallelism one). No refresh tokens are issued.
+
+Set `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, and `JWT_SECRET` in your process environment or `backend/.env` for local npm commands. See root `.env.example` for placeholders. Generate a secret with `openssl rand -hex 32`. Compose reads interpolation values from the root `.env` and passes them to the backend; it exposes PostgreSQL on host port 5433.
+
+From the repository root, run `npm --prefix backend run migration:run` before starting the backend. The new migration adds a nullable password hash for compatibility with existing accounts and a unique normalized-email index. Existing accounts without a hash cannot log in. If existing emails collide after trimming and lowercasing, resolve those duplicates before running the migration. Reverting this migration removes stored password hashes.
+
+- `POST /auth/register`: `{ "name": "Ada", "email": "ada@example.com", "password": "password123" }`, returns 201.
+- `POST /auth/login`: `{ "email": "ada@example.com", "password": "password123" }`, returns 200.
+
+Registration passwords must contain 8–128 characters. Passwords are never trimmed. Email addresses are trimmed and lowercased. Invalid input returns 400, duplicate registration 409, and invalid credentials 401.

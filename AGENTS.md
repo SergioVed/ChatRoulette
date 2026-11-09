@@ -75,3 +75,9 @@ References used to structure this file:
 
 - [OpenAI: Custom instructions with AGENTS.md](https://learn.chatgpt.com/docs/agent-configuration/agents-md)
 - [OpenAI: Keeping AGENTS.md current and focused](https://developers.openai.com/blog/rethinking-skills-and-prompts-for-gpt-6-astra)
+
+## Authentication and persistence
+
+The backend uses TypeORM/PostgreSQL with explicit migrations and `synchronize: false`. Run `npm --prefix backend run migration:run` before starting it. Local npm commands load `backend/.env`; configure `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, and `JWT_SECRET`. Compose reads the root `.env`, passes configuration to the backend, and exposes PostgreSQL on host port 5433.
+
+`POST /auth/register` and `POST /auth/login` return only an access token, valid for one hour. Passwords use Argon2id. Existing users without password hashes cannot log in. The normalized-email unique index rejects case/whitespace duplicates; migrations fail if existing duplicates need resolution. Auth setup details are in `backend/README.md`.
