@@ -25,7 +25,9 @@ export function useLogin() {
       }
       await navigate('/chat', { replace: true })
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Login failed. Please try again.')
+      setError(error instanceof Error
+          ? error.message
+          : 'Login failed. Please try again.')
     } finally {
       pending.current = false
       setLoading(false)
