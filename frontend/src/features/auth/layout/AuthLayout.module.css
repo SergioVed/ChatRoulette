@@ -4,9 +4,9 @@
   display: grid;
   place-items: center;
   padding: 40px 20px;
-  background: #f5f7fa;
-  color: #191e27;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--color-background);
+  color: var(--color-text);
+  font-family: var(--font-family-sans);
   line-height: 1.4;
   color-scheme: light;
 }
@@ -14,22 +14,22 @@
   box-sizing: border-box;
   width: 700px;
   max-width: 100%;
-  padding: 38px 44px 44px;
-  border: 1px solid #cbd0d9;
-  border-radius: 15px;
-  background: #fff;
-  box-shadow: 0 3px 7px #18202f0d;
+  padding: var(--space-38) 44px 44px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
 }
 .brand {
-  margin: 0 0 34px;
+  margin: 0 0 var(--space-34);
   text-align: center;
-  color: #307af4;
+  color: var(--color-primary);
   font-size: 38px;
   font-weight: 750;
   letter-spacing: -0.8px;
 }
 @media (max-width: 600px) {
-  .page { padding: 24px 16px; }
-  .card { padding: 28px 24px; }
-  .brand { font-size: 29px; margin-bottom: 24px; }
+  .page { padding: var(--space-24) 16px; }
+  .card { padding: var(--space-28) var(--space-24); }
+  .brand { font-size: 29px; margin-bottom: var(--space-24); }
 }

@@ -1,5 +1,29 @@
 :root {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --color-primary: #307af4;
+  --color-primary-hover: #246be0;
+  --color-background: #f5f7fa;
+  --color-surface: #fff;
+  --color-text: #191e27;
+  --color-text-muted: #374151;
+  --color-border: #cbd0d9;
+  --color-border-input: #b7bdc9;
+  --color-error: #ff334b;
+  --color-error-field: #ed263e;
+  --color-error-server: #c91c33;
+  --font-family-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --radius-control: 11px;
+  --radius-card: 15px;
+  --shadow-card: 0 3px 7px #18202f0d;
+  --focus-width: 3px;
+  --focus-offset: 3px;
+  --space-10: 10px;
+  --space-24: 24px;
+  --space-28: 28px;
+  --space-30: 30px;
+  --space-34: 34px;
+  --space-38: 38px;
+
+  font-family: var(--font-family-sans);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
