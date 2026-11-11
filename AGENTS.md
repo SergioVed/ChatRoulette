@@ -20,6 +20,31 @@ These describe the product direction. Check the code to establish which features
 
 There is no root `package.json` or npm workspace. Each application has its own manifest and lockfile. Use package scripts and source code to establish current behavior; application READMEs contain template instructions.
 
+## Frontend Architecture
+
+Stack:
+- React
+- TypeScript
+- React Router
+- CSS Modules
+
+Architecture:
+- Use feature-based architecture.
+- Pages are located in src/pages.
+- Feature-specific components, hooks, and API functions
+  belong to src/features/<feature>.
+- Shared reusable UI components belong to src/shared/components.
+- Shared HTTP configuration belongs to src/shared/api.
+
+Conventions:
+- Keep page components focused on composition.
+- Separate API requests from UI components.
+- Extract reusable logic into custom hooks when useful.
+- Use TypeScript interfaces/types for API contracts.
+- Handle loading and error states.
+- Avoid unnecessary abstractions and dependencies.
+- Reuse existing components before creating new ones.
+
 ## Setup and commands
 
 Use npm and Node.js 22.12 or newer, satisfying the backend and locked Vite engine requirements. Run these commands from the repository root:

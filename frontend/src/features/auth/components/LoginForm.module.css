@@ -1,0 +1,12 @@
+.form h1 { margin-bottom: 46px; }
+.form label { font-size: 24px; }
+.form input { height: 58px; }
+.form button { min-height: 62px; margin-top: 42px; }
+.error { min-height: 34px; margin-top: 18px; color: #ff334b; font-size: 22px; }
+.error p { margin: 0; }
+@media (max-width: 600px) {
+  .form h1 { margin-bottom: 30px; }
+  .form label { font-size: 18px; }
+  .error { font-size: 18px; }
+  .form button { margin-top: 28px; }
+}

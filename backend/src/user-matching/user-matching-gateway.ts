@@ -1,11 +1,17 @@
 import {
-    ConnectedSocket, MessageBody,
+    ConnectedSocket,
+    MessageBody,
     OnGatewayConnection,
     OnGatewayDisconnect,
     SubscribeMessage,
     WebSocketGateway,
 } from "@nestjs/websockets";
 import {UserMatchingService} from "./user-matching.service";
+import {EventType, EventType as Event} from "./types";
+import {MatchedMessage} from "./messages/MaatchedMessage";
+import {ConnectionMessage} from "./messages/ConnectionMessage";
+import { IceCandidateMessage } from './messages/IceCandidateMessage';
+import { OfferAnswerMessage } from './messages/OfferAnswerMessage';
 
 @WebSocketGateway(4321)
 export class UserMatchingGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -16,77 +22,51 @@ export class UserMatchingGateway implements OnGatewayConnection, OnGatewayDiscon
     ) {}
 
     private notifyUsers (match: {initiator: WebSocket, receiver: WebSocket}) {
-        match.initiator.send(JSON.stringify({
-            event: 'matched',
-            data: {initiator: true}
-        }))
-
-        match.receiver.send(JSON.stringify({
-            event: 'matched',
-            data: {initiator: false}
-        }))
+        match.initiator.send(JSON.stringify(new MatchedMessage(true)));
+        match.receiver.send(JSON.stringify(new MatchedMessage(false)));
     }
 
     handleDisconnect(client: WebSocket, reason?: string) {
-        client.send(JSON.stringify({
-            event: 'disconnected',
-            data: {message: 'User disconnected'}
-        }))
+        client.send(JSON.stringify(new ConnectionMessage(EventType.DISCONNECTED, "client disconnected")))
     }
 
     handleConnection(client: WebSocket, ...args: any[]) {
-        client.send(JSON.stringify({
-            event: 'connected',
-            data: {message: 'User connected'}
-        }))
+        client.send(JSON.stringify(new ConnectionMessage(EventType.CONNECTED, "client connected")))
     }
 
-    @SubscribeMessage('ice-candidate')
+    @SubscribeMessage(Event.ICE_CANDIDATE)
     handleIceCandidate(@ConnectedSocket() client: WebSocket, @MessageBody() data: any) {
         const pairedClient = this.userMatchingService.findPairedClient(client)
         if (pairedClient && pairedClient.readyState === WebSocket.OPEN) {
-            pairedClient.send(JSON.stringify({
-                event: 'ice-candidate',
-                data: {
-                    candidate: data.candidate
-                }
-            }))
+            pairedClient.send(JSON.stringify(new IceCandidateMessage(data.candidate)));
         }
     }
 
-    @SubscribeMessage('answer')
-    handleAnswer(@ConnectedSocket() client: WebSocket, @MessageBody() data: any) {
-        const pairedClient = this.userMatchingService.findPairedClient(client)
-        if (pairedClient) {
-            pairedClient.send(JSON.stringify({
-                event: 'answer',
-                data: {
-                    description: data.description
-                }
-            }))
-        }
+    @SubscribeMessage(Event.ANSWER)
+    handleAnswer(@ConnectedSocket() client: WebSocket, @MessageBody() data: any){
+        this.handleOfferAnswerEvent(Event.ANSWER, client, data)
     }
 
-    @SubscribeMessage('offer')
-    handleOffer(@ConnectedSocket() client: WebSocket, @MessageBody() data: any) {
-        const pairedClient = this.userMatchingService.findPairedClient(client)
-        if (pairedClient) {
-
-            pairedClient.send(JSON.stringify({
-                event: 'offer',
-                data: {
-                    description: data.description
-                }
-            }))
-        }
+    @SubscribeMessage(Event.OFFER)
+    handleOffer(@ConnectedSocket() client: WebSocket, @MessageBody() data: any){
+        this.handleOfferAnswerEvent(Event.OFFER, client, data)
     }
 
-    @SubscribeMessage('find-partner')
+    @SubscribeMessage(Event.FIND_PARTNER)
     handleFindPartner(@ConnectedSocket() client: WebSocket, @MessageBody() data: any) {
         const match = this.userMatchingService.addClientToQueue(client)
 
         if (match) {
             this.notifyUsers(match)
+        }
+    }
+
+
+    private handleOfferAnswerEvent (event: Event.OFFER | Event.ANSWER, @ConnectedSocket() client: WebSocket, @MessageBody() data: any) {
+        const pairedClient = this.userMatchingService.findPairedClient(client)
+        if (pairedClient) {
+
+            pairedClient.send(JSON.stringify(new OfferAnswerMessage(event, data.description)));
         }
     }
 }
