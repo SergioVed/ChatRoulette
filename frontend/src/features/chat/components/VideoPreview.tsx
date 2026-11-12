@@ -3,9 +3,17 @@ import {useEffect, useRef} from "react";
 
 interface VideoPreviewProps {
     stream: MediaStream | null,
+    className?: string,
+    muted?: boolean,
+    ariaLabel?: string,
 }
 
-export const VideoPreview = ({stream}: VideoPreviewProps) => {
+export const VideoPreview = ({
+    stream,
+    className = styles.video,
+    muted = true,
+    ariaLabel = 'Local camera preview placeholder',
+}: VideoPreviewProps) => {
 
     const videoRef = useRef<HTMLVideoElement>(null)
 
@@ -24,10 +32,10 @@ export const VideoPreview = ({stream}: VideoPreviewProps) => {
         <>
             <video
                 ref={videoRef}
-                className={styles.video}
-                aria-label="Local camera preview placeholder"
+                className={className}
+                aria-label={ariaLabel}
                 autoPlay
-                muted
+                muted={muted}
                 playsInline
             />
         </>

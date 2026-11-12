@@ -2,7 +2,8 @@ import { useState } from 'react'
 import styles from './SetupPage.module.css'
 import {ConversationSettings} from "../../features/chat/components/ConversationSettings.tsx";
 import {VideoPreview} from "../../features/chat/components/VideoPreview.tsx";
-import {MediaControls} from "../../features/chat/components/MediaControls.tsx";
+import { MicrophoneButton } from '../../features/chat/components/controls/MicrophoneButton'
+import { CameraButton } from '../../features/chat/components/controls/CameraButton'
 import type {useConversation} from "../../features/chat/hooks/useConversation.ts";
 import type {useLocalMedia} from "../../features/chat/hooks/useLocalMedia.ts";
 
@@ -41,7 +42,10 @@ export const SetupPage = ({media, conversation}: SetupPageProps) => {
 
           <div className={styles.preview}>
             <VideoPreview stream={media.stream}/>
-            <MediaControls toggleMicrophone={media.toggleMicrophone} toggleVideo={media.toggleVideo}/>
+            <div className={styles.mediaControls}>
+              <MicrophoneButton muted={media.muted} onClick={media.toggleMicrophone} />
+              <CameraButton enabled={media.displaying} onClick={media.toggleVideo} />
+            </div>
           </div>
 
         </section>
