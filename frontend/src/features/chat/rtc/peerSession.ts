@@ -12,16 +12,18 @@ class PeerSession {
     }
 
 
-    async handleOffer(description: RTCSessionDescription) {
+    async handleOffer(description: RTCSessionDescriptionInit) {
         await this.connection.setRemoteDescription(description)
         const answer = await this.connection.createAnswer();
 
         await this.connection.setLocalDescription(answer)
 
         this.flushPendingCandidates()
+
+        return answer;
     }
 
-    async handleAnswer(description: RTCSessionDescription){
+    async handleAnswer(description: RTCSessionDescriptionInit){
         await this.connection.setRemoteDescription(description)
         this.flushPendingCandidates()
     }
@@ -49,11 +51,11 @@ class PeerSession {
 
     async addLocalStream(stream: MediaStream) {
         stream.getTracks().forEach((track) => {
-            this.connection.addTrack(track)
+            this.connection.addTrack(track, stream)
         })
     }
 
-    async onRemoteStream (handler: (streams: MediaStream[]) => void) {
+    onRemoteStream (handler: (streams: MediaStream[]) => void) {
         this.connection.ontrack = (event) => {
             handler([...event.streams])
         }

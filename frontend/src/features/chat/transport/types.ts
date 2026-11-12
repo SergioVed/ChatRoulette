@@ -9,6 +9,7 @@ export enum EventType {
 }
 
 export type ServerMessage =
+    | {event: EventType.FIND_PARTNER}
     | { event: EventType.CONNECTED; data: { message: string } }
     | { event: EventType.DISCONNECTED; data: { message: string } }
     | { event: EventType.MATCHED; data: { initiator: boolean } }

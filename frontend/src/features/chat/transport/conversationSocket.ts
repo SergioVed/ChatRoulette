@@ -11,7 +11,7 @@ export class ConversationSocket {
 
     onMessage(handler: (message: ServerMessage) => void){
         this.socket.onmessage = (event: MessageEvent) => {
-            handler(event.data)
+            handler(JSON.parse(event.data))
         }
     }
 

@@ -1,8 +1,8 @@
 import styles from "../../../pages/SetupPage.module.css";
 
 interface MediaControlsProps {
-    toggleMicrophone: () => void,
-    toggleVideo: () => void
+    toggleMicrophone?: () => void,
+    toggleVideo?: () => void
 }
 
 export const MediaControls = (
