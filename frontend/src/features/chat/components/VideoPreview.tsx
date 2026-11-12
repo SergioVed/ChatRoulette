@@ -1,4 +1,4 @@
-import styles from "../../../pages/SetupPage.module.css";
+import styles from "../../../pages/call/SetupPage.module.css";
 import {useEffect, useRef} from "react";
 
 interface VideoPreviewProps {

@@ -1,17 +1,20 @@
 import { useState } from 'react'
 import styles from './SetupPage.module.css'
-import {ConversationSettings} from "../features/chat/components/ConversationSettings.tsx";
-import {VideoPreview} from "../features/chat/components/VideoPreview.tsx";
-import {MediaControls} from "../features/chat/components/MediaControls.tsx";
-import {useLocalMedia} from "../features/chat/hooks/useLocalMedia.ts";
-import {useConversation} from "../features/chat/hooks/useConversation.ts";
+import {ConversationSettings} from "../../features/chat/components/ConversationSettings.tsx";
+import {VideoPreview} from "../../features/chat/components/VideoPreview.tsx";
+import {MediaControls} from "../../features/chat/components/MediaControls.tsx";
+import type {useConversation} from "../../features/chat/hooks/useConversation.ts";
+import type {useLocalMedia} from "../../features/chat/hooks/useLocalMedia.ts";
 
-export const SetupPage = () => {
+export type SetupPageProps = {
+  media: ReturnType<typeof useLocalMedia>,
+  conversation: ReturnType<typeof useConversation>
+}
+
+export const SetupPage = ({media, conversation}: SetupPageProps) => {
   const [mode, setMode] = useState<'learn' | 'teach'>('learn')
   const [skill, setSkill] = useState('Guitar')
 
-  const {stream, toggleMicrophone, toggleVideo} = useLocalMedia();
-  const {remoteStream, findPartner} = useConversation(stream)
 
   return (
     <div className={styles.page}>
@@ -33,16 +36,14 @@ export const SetupPage = () => {
               <span className={styles.statusDot} aria-hidden="true" />
               Ready to connect.
             </p>
-            <button className={styles.findButton} type="button">Find teacher</button>
+            <button onClick={conversation.findPartner} className={styles.findButton} type="button">Find teacher</button>
           </div>
 
           <div className={styles.preview}>
-            <VideoPreview stream={stream}/>
-            <VideoPreview stream={remoteStream}/>
-            <MediaControls toggleMicrophone={toggleMicrophone} toggleVideo={toggleVideo}/>
+            <VideoPreview stream={media.stream}/>
+            <MediaControls toggleMicrophone={media.toggleMicrophone} toggleVideo={media.toggleVideo}/>
           </div>
 
-          <button onClick={findPartner}>find</button>
         </section>
       </main>
     </div>

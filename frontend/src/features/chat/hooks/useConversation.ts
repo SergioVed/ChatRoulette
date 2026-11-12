@@ -10,6 +10,7 @@ export function useConversation (localStream: MediaStream | null) {
     const socket = useRef<ConversationSocket | null>(null)
     const peerConnection = useRef<PeerSession | null>(null)
     const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null)
+    const [connectionState, setConnectionState] = useState<RTCPeerConnectionState>('new')
 
     const localStreamRef = useRef<MediaStream | null>(localStream)
 
@@ -19,7 +20,10 @@ export function useConversation (localStream: MediaStream | null) {
 
     useEffect(() => {
         socket.current = new ConversationSocket(WS_BASE_URL)
-        peerConnection.current = new PeerSession()
+        const peer = new PeerSession()
+        peerConnection.current = peer
+
+        const unsubscribeConnectionState = peer.onConnectionStateChange(setConnectionState)
 
         peerConnection.current.onRemoteStream((streams) => {
             setRemoteStream(streams[0] ?? null)
@@ -93,8 +97,9 @@ export function useConversation (localStream: MediaStream | null) {
         })
 
         return () => {
+            unsubscribeConnectionState()
             socket.current.close();
-            peerConnection.current.close();
+            peer.close();
         }
     }, [])
 
@@ -105,6 +110,6 @@ export function useConversation (localStream: MediaStream | null) {
     }
 
 
-    return {remoteStream, findPartner}
+    return {remoteStream, findPartner, isConnected: connectionState === 'connected'}
 
 }
