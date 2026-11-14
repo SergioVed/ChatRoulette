@@ -2,6 +2,7 @@ export enum EventType {
     CONNECTED = 'connected',
     DISCONNECTED = 'disconnected',
     FIND_PARTNER = 'find-partner',
+    END_CALL = 'end-call',
     MATCHED = 'matched',
     OFFER = 'offer',
     ANSWER = 'answer',
@@ -9,6 +10,7 @@ export enum EventType {
 }
 
 export type ServerMessage =
+    | {event: EventType.END_CALL, data: {initiator: boolean}}
     | {event: EventType.FIND_PARTNER}
     | { event: EventType.CONNECTED; data: { message: string } }
     | { event: EventType.DISCONNECTED; data: { message: string } }

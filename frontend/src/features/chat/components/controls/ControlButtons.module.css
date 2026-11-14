@@ -1,0 +1,64 @@
+.button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.button:focus-visible {
+  outline: var(--focus-width) solid var(--color-primary);
+  outline-offset: var(--focus-offset);
+}
+
+.mediaButton {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  height: 62px;
+  padding: 0 16px;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 38%, var(--color-surface));
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--color-primary) 16%, var(--color-surface));
+  font-size: 24px;
+}
+
+.mediaButton svg {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.mediaButton.mediaOff {
+  border-color: var(--color-error-server);
+  background: color-mix(in srgb, var(--color-error) 12%, var(--color-surface));
+  color: var(--color-error-server);
+}
+
+.actionButton {
+  height: 62px;
+  white-space: nowrap;
+  font-size: 22px;
+  flex: 1;
+  padding: 0 20px;
+  border: 1px solid;
+  border-radius: var(--radius-control);
+  font-weight: 700;
+}
+
+.actionButton.endCall {
+  border-color: var(--color-error-field);
+  background: var(--color-error-field);
+  color: var(--color-surface);
+}
+
+.actionButton.nextTeacher {
+  border-color: var(--color-primary);
+  background: var(--color-surface);
+  color: var(--color-primary);
+}

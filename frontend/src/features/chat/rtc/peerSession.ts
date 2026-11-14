@@ -61,15 +61,25 @@ class PeerSession {
         }
     }
 
+    onConnectionStateChange(handler: (state: RTCPeerConnectionState) => void): () => void {
+        const listener = () => {
+            handler(this.connection.connectionState)
+        }
 
+        this.connection.addEventListener('connectionstatechange', listener)
+        listener()
 
+        return () => {
+            this.connection.removeEventListener('connectionstatechange', listener)
+        }
+    }
 
     async close() {
         this.connection.close()
     }
 
 
-    private flushPendingCandidates () {
+    private async flushPendingCandidates () {
         if (this.pendingCandidates.length !== 0) {
             this.pendingCandidates.forEach((candidate: RTCIceCandidate) => {
                 this.connection.addIceCandidate(candidate)
