@@ -4,6 +4,8 @@ import { AuthModule } from './auth/auth.module';
 import {ConfigModule, ConfigService} from "@nestjs/config";
 import {TypeOrmModule} from "@nestjs/typeorm";
 import { UserMatchingModule } from './user-matching/user-matching.module';
+import { SkillsModule } from './skills/skills.module';
+import { UserSkillsModule } from './user-skills/user-skills.module';
 
 @Module({
   imports: [
@@ -32,6 +34,8 @@ import { UserMatchingModule } from './user-matching/user-matching.module';
       }),
     }),
 
+    UserSkillsModule,
+    SkillsModule,
   ],
 })
 export class AppModule {}

@@ -2,11 +2,7 @@ import { Column, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
 import type { Relation } from 'typeorm';
 import { Skill } from '../skills/skill.entity';
 import { User } from '../users/user.entity';
-
-export enum UserSkillRole {
-    TEACHER = 'teacher',
-    STUDENT = 'student',
-}
+import {UserSkillRole} from "./types";
 
 @Entity('user_skills')
 export class UserSkill {
