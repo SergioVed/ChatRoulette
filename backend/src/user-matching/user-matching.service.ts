@@ -15,6 +15,15 @@ export class UserMatchingService {
         return this.partners.get(client)
     }
 
+    public removePair (client: WebSocket) {
+        const partner = this.partners.get(client)
+
+        this.partners.delete(client)
+        if (partner) {
+            this.partners.delete(partner)
+        }
+    }
+
     public addClientToQueue (client: WebSocket) {
         if (this.queue.includes(client) || this.partners.has(client)) {
             return

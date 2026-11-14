@@ -12,6 +12,7 @@ import {MatchedMessage} from "./messages/MaatchedMessage";
 import {ConnectionMessage} from "./messages/ConnectionMessage";
 import { IceCandidateMessage } from './messages/IceCandidateMessage';
 import { OfferAnswerMessage } from './messages/OfferAnswerMessage';
+import {EndCallMessage} from "./messages/EndCallMessage";
 
 @WebSocketGateway(4321)
 export class UserMatchingGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -32,6 +33,17 @@ export class UserMatchingGateway implements OnGatewayConnection, OnGatewayDiscon
 
     handleConnection(client: WebSocket, ...args: any[]) {
         client.send(JSON.stringify(new ConnectionMessage(EventType.CONNECTED, "client connected")))
+    }
+
+    @SubscribeMessage(Event.END_CALL)
+    handleEndCall(@ConnectedSocket() client: WebSocket, @MessageBody() data: any) {
+        const partner = this.userMatchingService.findPairedClient(client)
+
+        if (partner) {
+            partner.send(JSON.stringify(new EndCallMessage(data.initiator)))
+        }
+
+        this.userMatchingService.removePair(client)
     }
 
     @SubscribeMessage(Event.ICE_CANDIDATE)
@@ -65,7 +77,6 @@ export class UserMatchingGateway implements OnGatewayConnection, OnGatewayDiscon
     private handleOfferAnswerEvent (event: Event.OFFER | Event.ANSWER, @ConnectedSocket() client: WebSocket, @MessageBody() data: any) {
         const pairedClient = this.userMatchingService.findPairedClient(client)
         if (pairedClient) {
-
             pairedClient.send(JSON.stringify(new OfferAnswerMessage(event, data.description)));
         }
     }

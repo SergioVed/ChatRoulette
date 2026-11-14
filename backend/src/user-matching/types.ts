@@ -1,5 +1,6 @@
 
 export enum EventType {
+    END_CALL="end-call",
     MATCHED="matched",
     CONNECTED="connected",
     DISCONNECTED="disconnected",

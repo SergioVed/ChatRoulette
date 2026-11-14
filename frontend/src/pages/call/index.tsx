@@ -10,7 +10,7 @@ export const Chat = () => {
     const conversation = useConversation(media.stream)
 
 
-    if (conversation.isConnected || true) {
+    if (conversation.isConnected) {
         return (
             <CallPage conversation={conversation} media={media} />
         )

@@ -79,7 +79,7 @@ class PeerSession {
     }
 
 
-    private flushPendingCandidates () {
+    private async flushPendingCandidates () {
         if (this.pendingCandidates.length !== 0) {
             this.pendingCandidates.forEach((candidate: RTCIceCandidate) => {
                 this.connection.addIceCandidate(candidate)
