@@ -1,10 +1,12 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {ConflictException, ForbiddenException, Injectable, NotFoundException} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { QueryFailedError, Repository } from 'typeorm';
 import { SkillsService } from '../skills/skills.service';
 import { CreateUserSkillDto } from './dto/create-user-skill.dto';
 import { UpdateUserSkillDto } from './dto/update-user-skill.dto';
 import { UserSkill } from './user-skill.entity';
+import {async} from "rxjs";
+import {Skill} from "../skills/skill.entity";
 
 @Injectable()
 export class UserSkillsService {
@@ -13,25 +15,43 @@ export class UserSkillsService {
     private readonly skills: SkillsService,
   ) {}
 
-  async create(userId: string, dto: CreateUserSkillDto): Promise<UserSkill> {
-    await this.skills.findOne(dto.skillId);
-    const where = { userId, skillId: dto.skillId };
+  async create(userId: string, dto: CreateUserSkillDto): Promise<UserSkill[]> {
 
-    const exists = await this.assignments.existsBy(where)
-
-    if (exists) {
-      throw new ConflictException('Skill is already assigned');
+    if (dto.skillIds.length === 0) {
+      throw new ForbiddenException("Skills should not be empty")
     }
 
-    try {
-      await this.assignments.insert({ ...where, role: dto.role });
-    } catch (error) {
-      if (error instanceof QueryFailedError && error.driverError.code === '23505') {
+    const addedSkills = []
+
+    for (const skillId of dto.skillIds) {
+      await this.skills.findOne(skillId);
+      const where = { userId, skillId: skillId };
+
+      const exists = await this.assignments.existsBy(where)
+
+      if (exists) {
         throw new ConflictException('Skill is already assigned');
       }
-      throw error;
+
+      try {
+        const assignment = this.assignments.create({
+          ...where,
+          role: dto.role,
+        });
+
+        const saved = await this.assignments.save(assignment);
+
+        addedSkills.push(saved);
+      } catch (error) {
+        if (error instanceof QueryFailedError && error.driverError.code === '23505') {
+          throw new ConflictException('Skill is already assigned');
+        }
+
+        throw error;
+      }
     }
-    return this.findOne(userId, dto.skillId);
+
+    return addedSkills;
   }
 
   findAll(userId: string): Promise<UserSkill[]> {

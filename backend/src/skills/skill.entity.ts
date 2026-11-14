@@ -9,6 +9,9 @@ export class Skill {
     @Column({ unique: true })
     name!: string;
 
+    @Column({ type: 'text', nullable: true })
+    icon!: string | null;
+
     @OneToMany(() => UserSkill, (userSkill) => userSkill.skill)
     userSkills?: UserSkill[];
 }

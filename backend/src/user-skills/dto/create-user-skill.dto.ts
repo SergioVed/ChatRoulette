@@ -1,9 +1,10 @@
-import { IsEnum, IsUUID } from 'class-validator';
+import {IsArray, IsEnum, IsUUID} from 'class-validator';
 import {UserSkillRole} from "../types";
 
 export class CreateUserSkillDto {
-  @IsUUID()
-  skillId!: string;
+  @IsArray()
+  @IsUUID('4', { each: true })
+  skillIds!: string[];
 
   @IsEnum(UserSkillRole)
   role!: UserSkillRole;

@@ -8,11 +8,11 @@ export class SkillsService {
   constructor(@InjectRepository(Skill) private readonly skills: Repository<Skill>) {}
 
   findAll(): Promise<Skill[]> {
-    return this.skills.find({ select: { id: true, name: true }});
+    return this.skills.find();
   }
 
   async findOne(id: string): Promise<Skill> {
-    const skill = await this.skills.findOne({ where: { id }, select: { id: true, name: true } });
+    const skill = await this.skills.findOne({ where: { id } });
     if (!skill) {
       throw new NotFoundException('Skill not found');
     }

@@ -1,6 +1,7 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import LoginPage from './pages/auth/LoginPage.tsx'
 import RegisterPage from './pages/auth/RegisterPage.tsx'
+import { SkillsSetupPage } from './pages/skills/SkillsSetupPage.tsx'
 import {Chat} from "./pages/call";
 
 export default function App() {
@@ -10,6 +11,7 @@ export default function App() {
         <Route path="/" element={<Chat />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/skills/setup" element={<SkillsSetupPage />} />
       </Routes>
     </BrowserRouter>
   )

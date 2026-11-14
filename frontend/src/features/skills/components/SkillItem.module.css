@@ -1,0 +1,26 @@
+.item { display: flex; align-items: center; gap: 12px; min-height: 68px; padding: 10px 16px; box-sizing: border-box; border: 1.5px solid #e0e4eb; border-radius: var(--radius-control); }
+.selected { border-color: #9cbfff; background: #f0f5ff; }
+.label { display: flex; align-items: center; gap: 24px; flex: 1; min-width: 0; font-size: 20px; font-weight: 650; }
+.label input { appearance: none; flex-shrink: 0; width: 25px; height: 25px; margin: 0; border: 1.5px solid var(--color-border-input); border-radius: 5px; background: var(--color-surface); opacity: 1; }
+.label input:checked { border-color: var(--color-primary); background: var(--color-primary); }
+.label { cursor: pointer; }
+.label input { cursor: pointer; }
+.label input:focus-visible { outline: var(--focus-width) solid var(--color-primary); outline-offset: var(--focus-offset); }
+.label input:checked::after { content: ''; display: block; width: 7px; height: 13px; border: solid white; border-width: 0 3px 3px 0; transform: translate(7px, 2px) rotate(45deg); }
+.label svg { width: 30px; height: 30px; flex-shrink: 0; }
+.label span { overflow-wrap: anywhere; }
+.roles { display: flex; flex-shrink: 0; border: 1px solid #dfe6f2; border-radius: 16px; background: #f8faff; }
+.roles button { min-height: 40px; padding: 6px 18px; border: 0; border-radius: 15px; background: transparent; color: var(--color-text-muted); font: inherit; font-size: 18px; font-weight: 600; opacity: 1; }
+.roles button[aria-pressed='true'] { background: var(--color-primary); color: white; }
+.roles button { cursor: pointer; }
+.roles button:focus-visible { outline: var(--focus-width) solid var(--color-primary); outline-offset: var(--focus-offset); }
+@media (max-width: 1200px) {
+  .label { gap: 12px; font-size: 18px; }
+  .roles button { padding-inline: 12px; font-size: 17px; }
+}
+@media (max-width: 600px) {
+  .item { flex-wrap: wrap; padding: 14px; gap: 12px; }
+  .label { flex-basis: 100%; font-size: 17px; }
+  .roles { margin-left: auto; }
+  .roles button { min-height: 36px; font-size: 16px; padding-inline: 14px; }
+}
