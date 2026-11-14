@@ -3,7 +3,9 @@ import {
     PrimaryGeneratedColumn,
     Column,
     Index,
+    OneToMany,
 } from 'typeorm';
+import { UserSkill } from '../user-skills/user-skill.entity';
 
 @Index('UQ_users_normalized_email', { synchronize: false })
 @Entity('users')
@@ -19,4 +21,7 @@ export class User {
 
     @Column({ name: 'password_hash', type: 'varchar', nullable: true, select: false })
     passwordHash!: string | null;
+
+    @OneToMany(() => UserSkill, (userSkill) => userSkill.user)
+    userSkills?: UserSkill[];
 }
