@@ -1,5 +1,6 @@
-import {type ReactNode, useState} from "react";
+import {type ReactNode, useEffect, useState} from "react";
 import {UserContext} from "./userContext.tsx";
+import {authMe} from "../../features/auth/api/authMe.ts";
 
 
 interface UserProviderProps {
@@ -11,8 +12,36 @@ export const UserProvider= ({children} : UserProviderProps) => {
         return localStorage.getItem("token")
     });
 
+    const [completedOnBoarding, setCompletedOnBoarding] = useState<boolean | null>(null)
+
+    useEffect(() => {
+        if (!token) {
+            setCompletedOnBoarding(null);
+            return;
+        }
+
+        async function getMe(accessToken: string) {
+            try {
+                const response = await authMe(accessToken);
+                setCompletedOnBoarding(response.completedOnboarding);
+            } catch (error) {
+                console.error("Failed to fetch user:", error);
+                setCompletedOnBoarding(null);
+            }
+        }
+
+        void getMe(token)
+    }, [token])
+
     return (
-        <UserContext.Provider value={{ token, setToken }}>
+        <UserContext.Provider
+            value={{
+                token,
+                setToken,
+                completedOnBoarding,
+                setCompletedOnBoarding,
+            }}
+        >
             {children}
         </UserContext.Provider>
     );
