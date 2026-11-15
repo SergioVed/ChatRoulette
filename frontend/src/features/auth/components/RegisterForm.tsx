@@ -21,7 +21,7 @@ function validate(values: RegistrationInput): Record<Field, string> {
 export default function RegisterForm() {
   const [values, setValues] = useState<RegistrationInput>({ name: '', email: '', password: '' })
   const [touched, setTouched] = useState<Partial<Record<Field, boolean>>>({})
-  const { loading, error, success, submit } = useRegistration()
+  const { loading, error, submit } = useRegistration()
   const errors = validate(values)
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -34,13 +34,6 @@ export default function RegisterForm() {
     }
     void submit(values)
   }
-
-  if (success) return (
-    <div className={styles.success} role="status">
-      <h1>Account created successfully</h1>
-      <Link to="/login">Log in</Link>
-    </div>
-  )
 
   return (
     <>

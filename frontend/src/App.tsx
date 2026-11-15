@@ -11,7 +11,7 @@ export default function App() {
         <Route path="/" element={<Chat />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
-        <Route path="/skills/setup" element={<SkillsSetupPage />} />
+        <Route path="/setup-skills" element={<SkillsSetupPage />} />
       </Routes>
     </BrowserRouter>
   )

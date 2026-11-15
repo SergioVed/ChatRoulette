@@ -1,5 +1,6 @@
-import { useRef, useState } from 'react'
+import { useContext, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { UserContext } from '../../../shared/context/userContext.tsx'
 import { login } from '../api/login.ts'
 import type { LoginInput } from '../types.ts'
 
@@ -8,6 +9,7 @@ export function useLogin() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const navigate = useNavigate()
+  const { setToken } = useContext(UserContext)!
 
   async function submit(input: LoginInput) {
     if (pending.current) return
@@ -23,7 +25,8 @@ export function useLogin() {
       } catch {
         throw new Error('Unable to save your session. Please enable browser storage and try again.')
       }
-      await navigate('/chat', { replace: true })
+      setToken(accessToken)
+      await navigate('/', { replace: true })
     } catch (error) {
       setError(error instanceof Error
           ? error.message

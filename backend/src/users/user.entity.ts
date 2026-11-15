@@ -22,6 +22,9 @@ export class User {
     @Column({ name: 'password_hash', type: 'varchar', nullable: true, select: false })
     passwordHash!: string | null;
 
+    @Column({ type: 'boolean', default: false })
+    onboardingCompleted!: boolean;
+
     @OneToMany(() => UserSkill, (userSkill) => userSkill.user)
     userSkills?: UserSkill[];
 }

@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, OnModuleInit, UnauthorizedException } from '@nestjs/common';
+import {ConflictException, Injectable, NotFoundException, OnModuleInit, UnauthorizedException} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { argon2id, hash, verify } from 'argon2';
 import { randomBytes } from 'node:crypto';
@@ -31,7 +31,7 @@ export class AuthService implements OnModuleInit {
     return this.createToken(user.id);
   }
 
-  async register(dto: RegisterDto): Promise<{ accessToken: string }> {
+  async register(dto: RegisterDto): Promise<{ accessToken: string; onboardingCompleted: boolean }> {
     const email = dto.email.trim().toLowerCase();
     if (await this.users.findByEmail(email)) {
       throw new ConflictException('Email is already registered');
@@ -48,7 +48,24 @@ export class AuthService implements OnModuleInit {
       }
       throw error;
     }
-    return this.createToken(user.id);
+    const token = await this.createToken(user.id);
+    return {
+      ...token,
+      onboardingCompleted: user.onboardingCompleted
+    };
+  }
+
+  async authMe(userId: string) {
+    const user = await this.users.getOne(userId);
+
+    if (!user) {
+      throw new NotFoundException('User not found')
+    }
+
+    return {
+      id: user.id,
+      onBoardingCompleted: user.onboardingCompleted
+    }
   }
 
   private async createToken(userId: string): Promise<{ accessToken: string }> {

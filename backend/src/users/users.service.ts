@@ -25,4 +25,10 @@ export class UsersService {
   create(name: string, email: string, passwordHash: string): Promise<User> {
     return this.users.save(this.users.create({ name, email, passwordHash }));
   }
+
+  getOne(id: string) {
+    return this.users.findOne({
+      where: {id}
+    })
+  }
 }

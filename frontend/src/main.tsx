@@ -2,7 +2,10 @@
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+import {UserProvider} from "./shared/context/userProvider.tsx";
 
 createRoot(document.getElementById('root')!).render(
-    <App />
+    <UserProvider>
+        <App />
+    </UserProvider>
 )
