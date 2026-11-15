@@ -1,13 +1,15 @@
 import styles from './SkillsForm.module.css'
 import { SkillItem } from './SkillItem.tsx'
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useSkills } from '../hooks/useSkills.ts'
 import { useDebounce } from '../../shared/hooks/useDebounce.ts'
 import {type SelectedSkill, SkillRole} from "../types.ts";
 
 export const SkillsForm = () => {
 
-  const { skills, loading, error, getSkills } = useSkills()
+  const { skills, loading, error, getSkills, saveSkills } = useSkills()
+  const navigate = useNavigate()
   const [name, setName] = useState('')
   const [selectedSkills, setSelectedSkills] = useState<SelectedSkill[]>([])
   const debouncedValue = useDebounce(name, 1000)
@@ -16,7 +18,16 @@ export const SkillsForm = () => {
     void getSkills()
   }, [])
 
-  console.log(selectedSkills)
+  async function handleContinue() {
+    if (loading || selectedSkills.length === 0) return
+
+    try {
+      await saveSkills(selectedSkills)
+      await navigate('/', { replace: true })
+    } catch {
+      // useSkills exposes the save error for the form to display.
+    }
+  }
 
   const toggleSkill = (id: string) => {
     setSelectedSkills((previous) => previous.find((skill) => skill.id === id)
@@ -80,7 +91,10 @@ export const SkillsForm = () => {
       </ul>
       <footer className={styles.footer}>
         <p aria-live="polite">{selectedSkills.length} {selectedSkills.length === 1 ? 'skill' : 'skills'} selected</p>
-        <button className={styles.continue} type="button" disabled>Continue</button>
+        <button className={styles.continue} type="button"
+          disabled={loading || selectedSkills.length === 0} onClick={() => void handleContinue()}>
+          Continue
+        </button>
       </footer>
     </main>
   </div>
