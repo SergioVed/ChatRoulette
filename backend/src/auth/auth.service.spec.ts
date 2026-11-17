@@ -24,7 +24,7 @@ describe('AuthService', () => {
   };
 
   function existingUser(): User {
-    return { id: userId, name: 'Test', email: credentials.email, passwordHash };
+    return { id: userId, name: 'Test', email: credentials.email, passwordHash, onboardingCompleted: false };
   }
 
   beforeAll(async () => {
@@ -37,7 +37,7 @@ describe('AuthService', () => {
 
     users.findByEmail.mockResolvedValue(null);
     users.create.mockImplementation(async (name, email, storedHash) => ({
-      id: userId, name, email, passwordHash: storedHash,
+      id: userId, name, email, passwordHash: storedHash, onboardingCompleted: false,
     }));
     jwt.signAsync.mockResolvedValue('test-token');
 
@@ -61,7 +61,7 @@ describe('AuthService', () => {
   });
 
   describe('register', () => {
-    it('normalizes account fields, hashes the exact password and returns only an access token', async () => {
+    it('normalizes account fields, hashes the exact password and returns the token and onboarding status', async () => {
       const result = await service.register(registration);
 
       expect(users.findByEmail).toHaveBeenCalledExactlyOnceWith(credentials.email);
@@ -73,7 +73,15 @@ describe('AuthService', () => {
       expect(await verify(storedHash, credentials.password)).toBe(true);
       expect(await verify(storedHash, credentials.password.trim())).toBe(false);
       expect(jwt.signAsync).toHaveBeenCalledExactlyOnceWith({ sub: userId });
-      expect(result).toEqual({ accessToken: 'test-token' });
+      expect(result).toEqual({ accessToken: 'test-token', onboardingCompleted: false });
+    });
+
+    it('returns completed onboarding from the saved user', async () => {
+      users.create.mockResolvedValue({ ...existingUser(), onboardingCompleted: true });
+
+      await expect(service.register(registration)).resolves.toEqual({
+        accessToken: 'test-token', onboardingCompleted: true,
+      });
     });
 
     it('rejects an existing email without creating an account or signing a token', async () => {

@@ -4,6 +4,9 @@ import { AuthModule } from './auth/auth.module';
 import {ConfigModule, ConfigService} from "@nestjs/config";
 import {TypeOrmModule} from "@nestjs/typeorm";
 import { UserMatchingModule } from './user-matching/user-matching.module';
+import { SkillsModule } from './skills/skills.module';
+import { UserSkillsModule } from './user-skills/user-skills.module';
+import { OpenaiModule } from './openai/openai.module';
 
 @Module({
   imports: [
@@ -32,6 +35,9 @@ import { UserMatchingModule } from './user-matching/user-matching.module';
       }),
     }),
 
+    UserSkillsModule,
+    SkillsModule,
+    OpenaiModule,
   ],
 })
 export class AppModule {}

@@ -59,7 +59,7 @@ export default function LoginForm() {
           {loading ? 'Logging in…' : 'Log in'}
         </button>
       </form>
-      <p className={styles.login}>Don't have an account? <Link to="/">Register.</Link></p>
+      <p className={styles.login}>Don't have an account? <Link to="/register">Register.</Link></p>
     </div>
   )
 }

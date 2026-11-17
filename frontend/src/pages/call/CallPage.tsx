@@ -1,7 +1,6 @@
 import { MicrophoneButton } from '../../features/chat/components/controls/MicrophoneButton'
 import { CameraButton } from '../../features/chat/components/controls/CameraButton'
 import { EndCallButton } from '../../features/chat/components/controls/EndCallButton'
-import { NextTeacherButton } from '../../features/chat/components/controls/NextTeacherButton'
 import { VideoPreview } from '../../features/chat/components/VideoPreview'
 import shell from './SetupPage.module.css'
 import styles from './CallPage.module.css'

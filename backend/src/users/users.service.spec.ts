@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { NotFoundException } from '@nestjs/common';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { User } from './user.entity';
@@ -12,6 +13,7 @@ describe('UsersService', () => {
     findOne: vi.fn(),
     create: vi.fn<(fields: Pick<User, 'name' | 'email' | 'passwordHash'>) => User>(),
     save: vi.fn<(user: User) => Promise<User>>(),
+    update: vi.fn(),
   };
 
   function userFixture(): User {
@@ -20,6 +22,7 @@ describe('UsersService', () => {
       name: 'Test',
       email: 'test@example.com',
       passwordHash: 'stored-password-hash',
+      onboardingCompleted: false,
     };
   }
 
@@ -60,6 +63,35 @@ describe('UsersService', () => {
       repository.findOne.mockRejectedValue(error);
 
       await expect(service.findByEmail('test@example.com')).rejects.toBe(error);
+    });
+  });
+
+  describe('completeOnBoarding', () => {
+    it('marks onboarding complete and returns the updated user', async () => {
+      const user = { ...userFixture(), onboardingCompleted: true };
+      repository.update.mockResolvedValue({ affected: 1 });
+      repository.findOne.mockResolvedValue(user);
+
+      await expect(service.completeOnBoarding(user.id)).resolves.toBe(user);
+      expect(repository.update).toHaveBeenCalledExactlyOnceWith(
+        { id: user.id }, { onboardingCompleted: true },
+      );
+      expect(repository.findOne).toHaveBeenCalledExactlyOnceWith({ where: { id: user.id } });
+    });
+
+    it('rejects a missing user', async () => {
+      repository.update.mockResolvedValue({ affected: 0 });
+
+      await expect(service.completeOnBoarding(userFixture().id))
+        .rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('propagates update failures without fetching a user', async () => {
+      const error = new Error('database unavailable');
+      repository.update.mockRejectedValue(error);
+
+      await expect(service.completeOnBoarding(userFixture().id)).rejects.toBe(error);
+      expect(repository.findOne).not.toHaveBeenCalled();
     });
   });
 

@@ -6,7 +6,7 @@ export async function authRequest(
   input: object,
   fallbackMessage: string,
   statusMessages: Record<number, string>,
-): Promise<AuthResponse> {
+): Promise<AuthResponse & { onboardingCompleted?: boolean }> {
   let response: Response
   try {
     response = await fetch(`${API_BASE_URL}/auth/${endpoint}`, {
@@ -35,5 +35,8 @@ export async function authRequest(
   if (typeof data?.accessToken !== 'string' || !data.accessToken) {
     throw new Error('Unexpected response from the server. Please try again.')
   }
-  return { accessToken: data.accessToken }
+  return {
+    accessToken: data.accessToken,
+    onboardingCompleted: data.onboardingCompleted
+  }
 }

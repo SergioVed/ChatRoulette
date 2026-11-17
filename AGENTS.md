@@ -1,108 +1,149 @@
-# Repository guidance
+# Repository Guidance — TeacherStudent
 
-## Project context
+## Project and Current Scope
 
-TeacherStudent is a chat roulette project designed to connect beginners in an activity or field with people who have more experience. Its purpose is to make it easy to ask questions and get practical advice through direct conversation.
+TeacherStudent connects people for practical knowledge sharing through video calls.
+Teachers need relevant experience, not formal qualifications.
 
-The intended experience is:
+Source code is authoritative. Current code includes:
+- Registration/login with JWT and Argon2id password hashing.
+- Skill onboarding with teacher/student roles and PostgreSQL persistence.
+- WebRTC media handling and WebSocket signaling with in-memory queue matching.
+- Dockerfiles and Docker Compose configuration.
 
-- A beginner presses **Find teacher** to be matched through chat roulette with someone more experienced in the relevant activity or field.
-- The participants chat so the beginner can ask questions and receive advice. A "teacher" can be any person with relevant experience; formal teaching qualifications are not required.
-- After each chat, an AI integration produces a short summary of the conversation.
+Matching currently ignores skill/role selections. Signaling has no JWT
+authentication, and WebRTC has STUN configuration without TURN.
+AI conversation summaries are planned, not implemented.
+Do not infer runtime reliability from the presence of implementation code.
 
-These describe the product direction. Check the code to establish which features are implementedSo  before making changes.
+## Repository and Architecture
 
-## Repository structure
+Each application has its own package.json and package-lock.json.
+There is no root npm workspace.
 
-- `backend/`: NestJS API. `src/main.ts` bootstraps the application; modules register controllers and injectable services.
-- `frontend/`: React with Vite, functional components, hooks, and plain CSS.
-- `compose.yaml`: backend, frontend, and PostgreSQL services.
+Backend: NestJS, TypeScript, PostgreSQL, TypeORM, JWT, Argon2id, and ws.
+- backend/src/: auth, users, skills, user-skills, and user-matching modules.
+- Controllers handle HTTP transport; services own business logic.
+- Use DTO validation, dependency injection, and TypeORM repositories.
+- Preserve the global ValidationPipe and established authorization patterns.
+- Runtime database configuration: backend/src/app.module.ts.
+- Migration configuration: backend/src/data-source.ts.
+- Schema changes require explicit migrations; keep synchronize: false.
+- Keep entity registration and migrations consistent with both configurations.
 
-There is no root `package.json` or npm workspace. Each application has its own manifest and lockfile. Use package scripts and source code to establish current behavior; application READMEs contain template instructions.
+Frontend: React, TypeScript, Vite, React Router, and CSS Modules.
+- frontend/src/pages/: route-level composition.
+- frontend/src/features/: feature components, hooks, API helpers, and contracts.
+- frontend/src/shared/api/: API and WebSocket URL configuration.
+- frontend/src/shared/context/: authentication/onboarding state.
+- Reuse existing components and hooks; separate requests from presentation.
+- Handle loading, error, and empty states.
+- Prefer CSS Modules; reserve global CSS for application-wide styles.
 
-## Frontend Architecture
+Verify dependency versions against manifests and lockfiles before changing them.
 
-Stack:
-- React
-- TypeScript
-- React Router
-- CSS Modules
+## Workflow
 
-Architecture:
-- Use feature-based architecture.
-- Pages are located in src/pages.
-- Feature-specific components, hooks, and API functions
-  belong to src/features/<feature>.
-- Shared reusable UI components belong to src/shared/components.
-- Shared HTTP configuration belongs to src/shared/api.
+Read-only investigation and review may proceed without implementation approval.
 
-Conventions:
-- Keep page components focused on composition.
-- Separate API requests from UI components.
-- Extract reusable logic into custom hooks when useful.
-- Use TypeScript interfaces/types for API contracts.
-- Handle loading and error states.
-- Avoid unnecessary abstractions and dependencies.
-- Reuse existing components before creating new ones.
+Before non-trivial implementation, inspect relevant code and present a concise
+plan naming affected files, architectural decisions, risks, and validation.
+Non-trivial work includes cross-module behavior, schema, authentication, and
+signaling changes. Wait for explicit approval unless already given in the
+conversation. Small changes may proceed when directly authorized.
 
-## Setup and commands
+After approval:
+- Stay within scope and preserve existing conventions.
+- Reuse existing code; justify new dependencies.
+- Seek approval for significant departures from the approved plan.
+- For complex tasks, consider delegating independent
+  frontend, backend, or review work to subagents.
+- Avoid multiple agents editing the same files concurrently.
+- Perform an independent code review after substantial changes.
+- The main agent remains responsible for integration,
+  validation, and the final report.
+- Review changes for correctness, security, typing, and compatibility.
 
-Use npm and Node.js 22.12 or newer, satisfying the backend and locked Vite engine requirements. Run these commands from the repository root:
+## Security and Real-Time Communication
+
+- Never commit credentials or expose backend secrets to the browser.
+- Never log passwords, password hashes, tokens, or sensitive user records.
+- HTTP authentication uses Bearer JWTs, HS256, and UUID user subjects.
+- Registration and login return accessToken; tokens expire after one hour.
+- POST /auth/auth-me supplies authenticated user/onboarding information.
+- Protect user-owned resources and validate untrusted input.
+- Preserve signaling event/payload compatibility across both applications.
+- Check disconnect cleanup, queue/pair state, media tracks, sockets, peer
+  connections, and failure handling when changing call behavior.
+- Verify media changes with two browser clients when possible; report
+  browser, permission, HTTPS, and network limitations.
+
+## Setup and Commands
+
+Use npm. Node 22.13+ within the 22.x line satisfies the current lockfile
+engine requirements; verify compatibility before selecting another major.
+
+Run these commands from the repository root:
 
 | Task | Command |
-| --- | --- |
-| Install backend dependencies | `npm --prefix backend ci` |
-| Install frontend dependencies | `npm --prefix frontend ci` |
-| Run backend in watch mode | `npm --prefix backend run dev` |
-| Run frontend development server | `npm --prefix frontend run dev` |
-| Build backend | `npm --prefix backend run build` |
-| Check backend types | `npm --prefix backend run typecheck` |
-| Run backend unit and e2e tests | `npm --prefix backend test` |
-| Run backend e2e tests | `npm --prefix backend run test:e2e` |
-| Build and type-check frontend | `npm --prefix frontend run build` |
-| Lint frontend with Oxlint | `npm --prefix frontend run lint` |
-| Run compiled backend | `npm --prefix backend start` (build first) |
+|---|---|
+| Install backend | npm --prefix backend ci |
+| Install frontend | npm --prefix frontend ci |
+| Backend development | npm --prefix backend run dev |
+| Frontend development | npm --prefix frontend run dev |
+| Backend build | npm --prefix backend run build |
+| Backend typecheck | npm --prefix backend run typecheck |
+| Backend tests | npm --prefix backend test |
+| Backend e2e | npm --prefix backend run test:e2e |
+| Frontend build | npm --prefix frontend run build |
+| Frontend lint | npm --prefix frontend run lint |
+| Run migrations | npm --prefix backend run migration:run |
 
-The backend defaults to port `3000` locally unless `PORT` is set. Its Dockerfile sets `PORT=9000`, matching Compose. Vite normally serves on port `5173`.
+Package scripts are authoritative. Frontend lint uses Oxlint.
+There is no frontend test script or backend lint script.
 
-For Compose configuration, copy `.env.example` to `.env` only if `.env` does not exist and set local PostgreSQL credentials. Check `compose.yaml` and the relevant Dockerfile when changing container behavior. The backend Dockerfile currently starts `dist/main.js` without building it; do not assume a clean Compose build produces a working backend.
+Existing backend test limitations:
+- The test script uses Node's runner and a shallow unit-test glob, while
+  nested source specs import Jest or Vitest.
+- The e2e test expects an unregistered Hello World route and requires
+  backend environment configuration and PostgreSQL.
+  Do not report complete unit coverage from the current test command.
 
-## Implementation conventions
+## Environment and Docker
 
-- Keep API behavior in NestJS controllers and injectable services; register new providers and controllers in the appropriate module.
-- Follow the surrounding style: backend TypeScript uses semicolons and single quotes; frontend TypeScript uses single quotes without semicolons. Backend formatting settings live in `backend/.prettierrc`.
-- Keep frontend components and styles under `frontend/src/`; use the existing React/hooks and CSS approach unless the task calls for a different architecture.
-- Keep dependency changes in the affected application's `package.json` and `package-lock.json`. Do not introduce a second package manager or edit generated `dist/` and `node_modules/` files.
-- When adding client/server integration, explicitly configure the API URL and any proxy or CORS behavior; none is currently configured. Keep credentials out of frontend code and browser-exposed configuration.
-- Document new environment variables with placeholder values in `.env.example` and implement any necessary environment loading. Do not commit local `.env` files or real credentials.
+- Root .env supplies Compose interpolation; local backend commands read
+  process variables or backend/.env.
+- Document backend/Compose variables in root .env.example and frontend
+  server variables in frontend/.env.example. Never commit real .env files.
+- Backend requires DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME,
+  and JWT_SECRET.
+- Backend HTTP defaults to 3000; Docker sets PORT=9000.
+  The current frontend uses http://localhost:9000, so set PORT=9000
+  for local backend development.
+- Signaling listens on 4321; frontend development uses 5173.
+- Compose exposes PostgreSQL at localhost:5433; backend containers use db:5432.
+- API_PROXY_TARGET only controls Vite's /api proxy. Current API helpers
+  use the absolute URL in frontend/src/shared/api/http.ts.
+- Inspect compose.yaml and Dockerfiles before changing container behavior.
+  Current containers run development servers.
+- Ensure PostgreSQL is ready and apply migrations before backend startup.
+  Compose does not automate migrations or database readiness ordering.
 
-## Validation and known gaps
+## Quality and Validation
 
-Choose checks for the changed application:
+- Preserve unrelated working-tree changes.
+- Prefer single quotes, backend semicolons, and frontend no semicolons;
+  follow nearby code without unrelated formatting changes.
+- Do not edit generated dist/, .test-dist/, or node_modules/ files.
+- Keep manifests and lockfiles synchronized.
+- Do not weaken compiler settings or remove tests to pass checks.
+- Avoid destructive schema changes without explicit authorization.
 
-- Frontend code: run its build and lint scripts. For UI behavior changes, also inspect the affected screen in a browser when available.
-- Backend code: run its build, typecheck, and test scripts. For endpoint changes, exercise the affected route against the running application.
-- Documentation-only changes: verify referenced paths and commands and run `git diff --check`; application builds are unnecessary.
+For frontend changes, run build and lint; inspect affected browser behavior.
+For backend changes, run build, typecheck, and relevant tests; verify affected
+endpoints when practical, accounting for the test limitations above.
+For documentation changes, verify paths/commands and run git diff --check.
 
-Backend tests use `node:test`, `node:assert/strict`, and `@nestjs/testing`. The test scripts compile TypeScript with decorator metadata into ignored `.test-dist/` before running unit and end-to-end tests. `tsconfig.test.json` includes both `src/` and `test/` for typechecking. End-to-end tests require permission to listen on a loopback port and close their application after each test. The frontend has no test script. The backend ESLint configuration still references undeclared packages, and there is no backend lint script.
-
-Use the package scripts as the source of truth for available checks. If the task includes enabling frontend tests or backend linting, configure the necessary dependencies and scripts together; otherwise, report these limitations separately from failures introduced by the change. Do not weaken compiler settings or remove tests just to obtain a passing check.
-
-In the final response, state what changed, which checks ran, and any remaining failures or unverified behavior.
-
-## Maintaining these instructions
-
-Keep this file focused on durable repository facts, commands, and consequential pitfalls. Update it when the relevant setup changes, especially when the starter tooling gaps are resolved. Read supporting files as needed for the task instead of requiring a full repository review for every edit.
-
-For future directory-specific guidance, place an `AGENTS.md` in that directory rather than expanding unrelated root instructions.
-
-References used to structure this file:
-
-- [OpenAI: Custom instructions with AGENTS.md](https://learn.chatgpt.com/docs/agent-configuration/agents-md)
-- [OpenAI: Keeping AGENTS.md current and focused](https://developers.openai.com/blog/rethinking-skills-and-prompts-for-gpt-6-astra)
-
-## Authentication and persistence
-
-The backend uses TypeORM/PostgreSQL with explicit migrations and `synchronize: false`. Run `npm --prefix backend run migration:run` before starting it. Local npm commands load `backend/.env`; configure `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, and `JWT_SECRET`. Compose reads the root `.env`, passes configuration to the backend, and exposes PostgreSQL on host port 5433.
-
-`POST /auth/register` and `POST /auth/login` return only an access token, valid for one hour. Passwords use Argon2id. Existing users without password hashes cannot log in. The normalized-email unique index rejects case/whitespace duplicates; migrations fail if existing duplicates need resolution. Auth setup details are in `backend/README.md`.
+Report changed files, checks actually executed, results, and remaining
+limitations. Separate existing failures from regressions.
+Keep this file concise and update it when stable project conventions change.

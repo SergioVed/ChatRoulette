@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react'
+import { useContext, useRef, useState } from 'react'
+import { UserContext } from '../../../shared/context/userContext.tsx'
 import { register } from '../api/register.ts'
 import type { RegistrationInput } from '../types.ts'
 
@@ -6,7 +7,7 @@ export function useRegistration() {
   const pending = useRef(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
+  const { setToken } = useContext(UserContext)!
 
   async function submit(input: RegistrationInput) {
     if (pending.current) return
@@ -16,8 +17,14 @@ export function useRegistration() {
     setError('')
 
     try {
-      await register(input)
-      setSuccess(true)
+      const { accessToken } = await register(input)
+      try {
+        localStorage.setItem('token', accessToken)
+      } catch {
+        throw new Error('Unable to save your session. Please enable browser storage and try again.')
+      }
+
+      setToken(accessToken)
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Registration failed. Please try again.')
     } finally {
@@ -26,5 +33,5 @@ export function useRegistration() {
     }
   }
 
-  return { loading, error, success, submit }
+  return { loading, error, submit }
 }
