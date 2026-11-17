@@ -1,10 +1,11 @@
 import styles from './SkillsForm.module.css'
 import { SkillItem } from './SkillItem.tsx'
-import { useEffect, useState } from 'react'
+import {useContext, useEffect, useState} from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSkills } from '../hooks/useSkills.ts'
 import { useDebounce } from '../../shared/hooks/useDebounce.ts'
 import {type SelectedSkill, SkillRole} from "../types.ts";
+import {UserContext} from "../../../shared/context/userContext.tsx";
 
 export const SkillsForm = () => {
 
@@ -13,6 +14,7 @@ export const SkillsForm = () => {
   const [name, setName] = useState('')
   const [selectedSkills, setSelectedSkills] = useState<SelectedSkill[]>([])
   const debouncedValue = useDebounce(name, 1000)
+  const {setCompletedOnBoarding} = useContext(UserContext)
 
   useEffect(() => {
     void getSkills()
@@ -24,6 +26,7 @@ export const SkillsForm = () => {
     try {
       await saveSkills(selectedSkills)
       await navigate('/', { replace: true })
+      setCompletedOnBoarding(true)
     } catch {
       // useSkills exposes the save error for the form to display.
     }

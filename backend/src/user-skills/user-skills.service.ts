@@ -5,35 +5,33 @@ import { SkillsService } from '../skills/skills.service';
 import { CreateUserSkillDto } from './dto/create-user-skill.dto';
 import { UpdateUserSkillDto } from './dto/update-user-skill.dto';
 import { UserSkill } from './user-skill.entity';
-import {async} from "rxjs";
-import {Skill} from "../skills/skill.entity";
+import { UsersService } from '../users/users.service';
+import type { CreateUserSkillsResponse } from './types';
 
 @Injectable()
 export class UserSkillsService {
   constructor(
     @InjectRepository(UserSkill) private readonly assignments: Repository<UserSkill>,
     private readonly skills: SkillsService,
+    private readonly users: UsersService,
   ) {}
 
-  async create(userId: string, dto: CreateUserSkillDto): Promise<UserSkill[]> {
-
+  async create(userId: string, dto: CreateUserSkillDto): Promise<CreateUserSkillsResponse> {
     if (dto.skillIds.length === 0) {
-      throw new ForbiddenException("Skills should not be empty")
+      throw new ForbiddenException('Skills should not be empty');
     }
 
-    const addedSkills = []
+    try {
+      const addedSkills: UserSkill[] = [];
 
-    for (const skillId of dto.skillIds) {
-      await this.skills.findOne(skillId);
-      const where = { userId, skillId: skillId };
+      for (const skillId of dto.skillIds) {
+        await this.skills.findOne(skillId);
+        const where = { userId, skillId };
 
-      const exists = await this.assignments.existsBy(where)
+        if (await this.assignments.existsBy(where)) {
+          throw new ConflictException('Skill is already assigned');
+        }
 
-      if (exists) {
-        throw new ConflictException('Skill is already assigned');
-      }
-
-      try {
         const assignment = this.assignments.create({
           ...where,
           role: dto.role,
@@ -42,16 +40,17 @@ export class UserSkillsService {
         const saved = await this.assignments.save(assignment);
 
         addedSkills.push(saved);
-      } catch (error) {
-        if (error instanceof QueryFailedError && error.driverError.code === '23505') {
-          throw new ConflictException('Skill is already assigned');
-        }
-
-        throw error;
       }
-    }
 
-    return addedSkills;
+      const updatedUser = await this.users.completeOnBoarding(userId);
+      return { updatedUser, addedSkills };
+    } catch (error) {
+      if (error instanceof QueryFailedError && error.driverError?.code === '23505') {
+        throw new ConflictException('Skill is already assigned');
+      }
+
+      throw error;
+    }
   }
 
   findAll(userId: string): Promise<UserSkill[]> {
