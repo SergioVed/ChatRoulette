@@ -44,6 +44,14 @@ jobs:
       run:
         working-directory: ./backend
 
+    env:
+      DB_HOST: localhost
+      DB_PORT: '5432'
+      DB_NAME: test_db
+      DB_USER: test_user
+      DB_PASSWORD: test_password
+      JWT_SECRET: ci-test-only-secret
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
