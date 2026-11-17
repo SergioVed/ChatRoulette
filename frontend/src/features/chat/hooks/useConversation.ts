@@ -1,11 +1,14 @@
-import {type Dispatch, type SetStateAction, useEffect, useRef, useState} from "react";
+import {type Dispatch, type SetStateAction, useContext, useEffect, useRef, useState} from "react";
 import {ConversationSocket} from "../transport/conversationSocket.ts";
 import PeerSession from "../rtc/peerSession.ts";
 import {WS_BASE_URL} from "../../../shared/api/http.ts";
 import {EventType} from "../transport/types.ts";
+import {UserContext} from "../../../shared/context/userContext.tsx";
 
 
 export function useConversation (localStream: MediaStream | null) {
+
+    const {token} = useContext(UserContext)
 
     const socket = useRef<ConversationSocket | null>(null)
     const peerConnection = useRef<PeerSession | null>(null)
@@ -21,7 +24,6 @@ export function useConversation (localStream: MediaStream | null) {
 
 
     useEffect(() => {
-
         // Starting up with assigning and creating connections
         socket.current = new ConversationSocket(WS_BASE_URL)
         const {unsubscribeConnection, peerSession} = setupPeerConnection(setConnectionState);
@@ -81,6 +83,13 @@ export function useConversation (localStream: MediaStream | null) {
 
                     break
                 }
+
+                case EventType.CONNECTED: {
+                    socket.current.sendMessage({
+                        event: EventType.AUTHENTICATE,
+                        data: {accessToken: token}
+                    })
+                }
             }
         })
 
@@ -132,11 +141,12 @@ export function useConversation (localStream: MediaStream | null) {
 
 
 
-    async function findPartner () {
+    async function findPartner (skillId: string) {
         replacePeerConnection()
 
         socket.current.sendMessage({
-            event: EventType.FIND_PARTNER
+            event: EventType.FIND_PARTNER,
+            data: {skillId: skillId}
         })
     }
 

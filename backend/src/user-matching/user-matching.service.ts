@@ -1,14 +1,30 @@
 import { Injectable } from '@nestjs/common';
+import {QueueObj} from "./types";
+import {UserSkillsService} from "../user-skills/user-skills.service";
+import {UserSkill} from "../user-skills/user-skill.entity";
 
 @Injectable()
 export class UserMatchingService {
 
-    private queue: WebSocket[]
+    private queue: QueueObj[]
     private partners: Map<WebSocket, WebSocket>
+    private socketUsers: Map<WebSocket, string>
 
-    constructor() {
+    constructor(
+        private userSkillsService: UserSkillsService
+    ) {
         this.queue = [];
         this.partners = new Map<WebSocket, WebSocket>()
+        this.socketUsers = new Map<WebSocket, string>()
+
+    }
+
+    public getClientFromSocketUsers (client: WebSocket) {
+        return this.socketUsers.get(client)
+    }
+
+    public addClientToSocketUsers (client: WebSocket, userId: string) {
+        this.socketUsers.set(client, userId)
     }
 
     public findPairedClient (client: WebSocket) {
@@ -24,21 +40,45 @@ export class UserMatchingService {
         }
     }
 
-    public addClientToQueue (client: WebSocket) {
-        if (this.queue.includes(client) || this.partners.has(client)) {
+    public async addClientToQueue (requestingClient: WebSocket, skillId: string, userId: string) {
+        const existing = this.queue.find((client) => client.client === requestingClient)
+        if (existing || this.partners.has(requestingClient)) {
             return
         }
-        if (client !== null && this.queue.length < 1) {
-            this.queue.push(client)
-        } else {
-            const waitingClient = this.queue.shift()
 
-            if (!waitingClient) {
-                return
-            }
-
-            return this.matchClients(client, waitingClient)
+        const currentUserSkill = await this.userSkillsService.findOne(userId, skillId)
+        if (!currentUserSkill) {
+            return
         }
+
+        const partner = this.findPartner(skillId, currentUserSkill)
+
+        if (partner != null) {
+            this.queue = this.queue.filter(client => client !== partner)
+            this.matchClients(requestingClient, partner.client)
+
+            return {
+                initiator: requestingClient,
+                receiver: partner.client
+            }
+        } else {
+            this.queue.push({
+                client: requestingClient,
+                userId: userId,
+                skillId: skillId,
+                role: currentUserSkill.role
+            })
+            console.log(this.queue)
+
+        }
+    }
+
+    private findPartner (skillId: string, requestingUser: UserSkill): QueueObj | null {
+        const client = this.queue.find(client => {
+            return client.skillId === requestingUser.skillId && client.role !== requestingUser.role
+        })
+
+        return client ?? null
     }
 
     private matchClients (client: WebSocket, waitingClient: WebSocket) {

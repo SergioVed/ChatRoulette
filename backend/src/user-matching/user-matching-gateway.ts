@@ -13,13 +13,14 @@ import {ConnectionMessage} from "./messages/ConnectionMessage";
 import { IceCandidateMessage } from './messages/IceCandidateMessage';
 import { OfferAnswerMessage } from './messages/OfferAnswerMessage';
 import {EndCallMessage} from "./messages/EndCallMessage";
+import {AuthService} from "../auth/auth.service";
 
 @WebSocketGateway(4321)
 export class UserMatchingGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
-
     constructor(
-        private userMatchingService: UserMatchingService
+        private userMatchingService: UserMatchingService,
+        private authService: AuthService
     ) {}
 
     private notifyUsers (match: {initiator: WebSocket, receiver: WebSocket}) {
@@ -33,6 +34,19 @@ export class UserMatchingGateway implements OnGatewayConnection, OnGatewayDiscon
 
     handleConnection(client: WebSocket, ...args: any[]) {
         client.send(JSON.stringify(new ConnectionMessage(EventType.CONNECTED, "client connected")))
+    }
+
+    @SubscribeMessage(Event.AUTHENTICATE)
+    async handleAuthenticate (@ConnectedSocket() client: WebSocket, @MessageBody() data: any) {
+        if (data.accessToken == '' || data.accessToken == null) {
+            return;
+        }
+
+        const userId = await this.authService.verifyToken(data.accessToken);
+
+        if (client.readyState === WebSocket.OPEN) {
+            this.userMatchingService.addClientToSocketUsers(client, userId);
+        }
     }
 
     @SubscribeMessage(Event.END_CALL)
@@ -65,10 +79,18 @@ export class UserMatchingGateway implements OnGatewayConnection, OnGatewayDiscon
     }
 
     @SubscribeMessage(Event.FIND_PARTNER)
-    handleFindPartner(@ConnectedSocket() client: WebSocket, @MessageBody() data: any) {
-        const match = this.userMatchingService.addClientToQueue(client)
+    async handleFindPartner(@ConnectedSocket() client: WebSocket, @MessageBody() data: any) {
+        console.log("received req")
+        const userId = this.userMatchingService.getClientFromSocketUsers(client)
+        if (!userId) {
+            return;
+        }
+
+
+        const match = await this.userMatchingService.addClientToQueue(client, data.skillId, userId)
 
         if (match) {
+            console.log("Matched")
             this.notifyUsers(match)
         }
     }

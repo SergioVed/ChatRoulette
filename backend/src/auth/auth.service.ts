@@ -6,6 +6,8 @@ import { QueryFailedError } from 'typeorm';
 import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import {type} from "node:os";
+import {isUUID} from "class-validator";
 
 const hashingOptions = { type: argon2id, memoryCost: 65536, timeCost: 3, parallelism: 1 } as const;
 
@@ -71,5 +73,22 @@ export class AuthService implements OnModuleInit {
   private async createToken(userId: string): Promise<{ accessToken: string }> {
     const token = await this.jwt.signAsync({ sub: userId })
     return { accessToken: token };
+  }
+
+  public async verifyToken (accessToken: string) {
+    try {
+      const payload = await this.jwt.verifyAsync<{ sub: string }>(
+          accessToken,
+          { algorithms: ['HS256'] },
+      )
+
+      if (typeof payload.sub !== 'string' || !isUUID(payload.sub)){
+        throw new UnauthorizedException()
+      }
+
+      return payload.sub;
+    } catch (error) {
+      throw new UnauthorizedException('Invalid or expired access token')
+    }
   }
 }

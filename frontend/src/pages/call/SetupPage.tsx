@@ -13,9 +13,8 @@ export type SetupPageProps = {
 }
 
 export const SetupPage = ({media, conversation}: SetupPageProps) => {
-  const [mode, setMode] = useState<'learn' | 'teach'>('learn')
-  const [skill, setSkill] = useState('Guitar')
 
+  const [skillId, setSkillId] = useState<string>('')
 
   return (
     <div className={styles.page}>
@@ -31,13 +30,13 @@ export const SetupPage = ({media, conversation}: SetupPageProps) => {
         <section className={styles.card} aria-labelledby="conversation-heading">
           <div className={styles.settings}>
             <h1 id="conversation-heading">Start a conversation</h1>
-            <ConversationSettings mode={mode} skill={skill} setMode={setMode} setSkill={setSkill}/>
+            <ConversationSettings  setSkillId={setSkillId} skillId={skillId}/>
 
             <p className={styles.status}>
               <span className={styles.statusDot} aria-hidden="true" />
               Ready to connect.
             </p>
-            <button onClick={conversation.findPartner} className={styles.findButton} type="button">Find teacher</button>
+            <button onClick={() => conversation.findPartner(skillId)} className={styles.findButton} type="button">Find teacher</button>
           </div>
 
           <div className={styles.preview}>
