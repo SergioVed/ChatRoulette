@@ -15,16 +15,7 @@ export const ConversationSettings = (
 
     return (
         <>
-            <div className={styles.modeSelector} role="group" aria-label="Conversation mode">
-                <button type="button" aria-pressed={mode === 'learn'} onClick={() => setMode('learn')}>
-                    Learn
-                </button>
-                <button type="button" aria-pressed={mode === 'teach'} onClick={() => setMode('teach')}>
-                    Teach
-                </button>
-            </div>
-
-            <div className={styles.skillField}>
+            <div className={styles.skillField}>n
                 <label htmlFor="skill">Skill</label>
                 <div className={styles.selectWrapper}>
                     <select id="skill" value={skill} onChange={(event) => setSkill(event.target.value)}>
