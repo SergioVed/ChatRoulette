@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, type EntityManager } from 'typeorm';
 import { Skill } from './skill.entity';
 
 @Injectable()
@@ -11,8 +11,9 @@ export class SkillsService {
     return this.skills.find();
   }
 
-  async findOne(id: string): Promise<Skill> {
-    const skill = await this.skills.findOne({ where: { id } });
+  async findOne(id: string, manager?: EntityManager): Promise<Skill> {
+    const skills = manager?.getRepository(Skill) ?? this.skills;
+    const skill = await skills.findOne({ where: { id } });
     if (!skill) {
       throw new NotFoundException('Skill not found');
     }
