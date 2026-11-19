@@ -1,4 +1,5 @@
 export enum EventType {
+    NEXT="next",
     CONNECTED = 'connected',
     DISCONNECTED = 'disconnected',
     FIND_PARTNER = 'find-partner',
@@ -6,12 +7,15 @@ export enum EventType {
     MATCHED = 'matched',
     OFFER = 'offer',
     ANSWER = 'answer',
+    AUTHENTICATE="authenticate",
     ICE_CANDIDATE = 'ice-candidate',
 }
 
 export type ServerMessage =
+    | {event: EventType.NEXT, data: {skillId: string}}
+    | {event: EventType.AUTHENTICATE, data: {accessToken: string}}
     | {event: EventType.END_CALL, data: {initiator: boolean}}
-    | {event: EventType.FIND_PARTNER}
+    | {event: EventType.FIND_PARTNER, data: {skillId: string}}
     | { event: EventType.CONNECTED; data: { message: string } }
     | { event: EventType.DISCONNECTED; data: { message: string } }
     | { event: EventType.MATCHED; data: { initiator: boolean } }

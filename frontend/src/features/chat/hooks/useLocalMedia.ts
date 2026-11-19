@@ -6,6 +6,7 @@ export function useLocalMedia () {
     const [muted, setMuted] = useState<boolean>(false)
     const [displaying, setDisplay] = useState<boolean>(true)
 
+
     useEffect(() => {
         let active = true
         let localStream: MediaStream | null = null
@@ -38,14 +39,34 @@ export function useLocalMedia () {
     }, [])
 
     function toggleMicrophone () {
-        const enable = stream.getTracks()[0].enabled
-        stream.getTracks()[0].enabled = !enable;
+        const mediaStream = stream;
+        if (!mediaStream) {
+            throw new Error('No stream')
+        }
+
+        const audioTrack = mediaStream.getAudioTracks()[0];
+        if (!audioTrack) {
+            return
+        }
+
+        const enable = audioTrack.enabled
+        audioTrack.enabled = !enable;
         setMuted(enable)
     }
 
     function toggleVideo () {
-        const enable = stream.getTracks()[1].enabled
-        stream.getTracks()[1].enabled = !enable;
+        const mediaStream = stream
+        if (!mediaStream) {
+            throw new Error('No stream')
+        }
+
+        const videoTrack = mediaStream.getVideoTracks()[0];
+        if (!videoTrack) {
+            return
+        }
+
+        const enable = videoTrack.enabled
+        videoTrack.enabled = !enable;
         setDisplay(!enable)
     }
 

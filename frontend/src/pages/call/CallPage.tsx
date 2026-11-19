@@ -6,13 +6,15 @@ import shell from './SetupPage.module.css'
 import styles from './CallPage.module.css'
 import type {useLocalMedia} from "../../features/chat/hooks/useLocalMedia.ts";
 import type {useConversation} from "../../features/chat/hooks/useConversation.ts";
+import {NextTeacherButton} from "../../features/chat/components/controls/NextTeacherButton.tsx";
 
 export type CallPageProps = {
   media: ReturnType<typeof useLocalMedia>,
-  conversation: ReturnType<typeof useConversation>
+  conversation: ReturnType<typeof useConversation>,
+  skillId: string,
 }
 
-export const CallPage = ({media, conversation}: CallPageProps) => {
+export const CallPage = ({media, conversation, skillId}: CallPageProps) => {
 
   return (
       <div className={shell.page}>
@@ -54,7 +56,7 @@ export const CallPage = ({media, conversation}: CallPageProps) => {
                 <CameraButton enabled={media.displaying} onClick={media.toggleVideo} />
               </div>
               <EndCallButton onClick={conversation.endCall}/>
-              {/*<NextTeacherButton/>*/}
+              <NextTeacherButton onClick={() => conversation.next(skillId)}/>
             </div>
           </section>
         </main>

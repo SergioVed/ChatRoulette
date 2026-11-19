@@ -1,5 +1,8 @@
+import {UserSkillRole} from "../user-skills/types";
 
 export enum EventType {
+    AUTHENTICATE="authenticate",
+    NEXT="next",
     END_CALL="end-call",
     MATCHED="matched",
     CONNECTED="connected",
@@ -8,4 +11,16 @@ export enum EventType {
     ANSWER="answer",
     OFFER="offer",
     FIND_PARTNER="find-partner"
+}
+
+export interface QueueObj {
+    client: WebSocket,
+    userId: string,
+    skillId: string,
+    role: UserSkillRole
+}
+
+export interface AuthenticatedUser {
+    userId: string,
+    exp: number
 }

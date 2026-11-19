@@ -6,6 +6,8 @@ import { QueryFailedError } from 'typeorm';
 import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import {isUUID} from "class-validator";
+import {AuthenticatedUser} from "../user-matching/types";
 
 const hashingOptions = { type: argon2id, memoryCost: 65536, timeCost: 3, parallelism: 1 } as const;
 
@@ -21,7 +23,6 @@ export class AuthService implements OnModuleInit {
 
   async login(dto: LoginDto): Promise<{ accessToken: string }> {
     const user = await this.users.findByEmail(dto.email);
-    console.log(user)
     const matches = await verify(user?.passwordHash ?? this.dummyHash, dto.password);
 
     if (!user?.passwordHash || !matches) {
@@ -71,5 +72,25 @@ export class AuthService implements OnModuleInit {
   private async createToken(userId: string): Promise<{ accessToken: string }> {
     const token = await this.jwt.signAsync({ sub: userId })
     return { accessToken: token };
+  }
+
+  public async verifyToken (accessToken: string): Promise<AuthenticatedUser> {
+    try {
+      const payload = await this.jwt.verifyAsync<{ sub: string, exp: number }>(
+          accessToken,
+          { algorithms: ['HS256'] },
+      )
+
+      if (typeof payload.sub !== 'string' || !isUUID(payload.sub)){
+        throw new UnauthorizedException()
+      }
+
+      return {
+        userId: payload.sub,
+        exp: payload.exp
+      };
+    } catch (error) {
+      throw new UnauthorizedException('Invalid or expired access token')
+    }
   }
 }
