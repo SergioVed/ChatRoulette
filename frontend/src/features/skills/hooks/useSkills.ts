@@ -1,10 +1,10 @@
-import { useContext, useState } from 'react'
+import { useState } from 'react'
 import type { SelectedSkill, Skill } from '../types.ts'
 import { apiGetSkills, saveSkills as apiSaveSkills } from '../api/apiGetSkills.ts'
-import { UserContext } from '../../../shared/context/userContext.tsx'
+import {useUserContext} from "../../shared/hooks/useUserContext.ts";
 
 export function useSkills() {
-  const { token } = useContext(UserContext)!
+  const { token } = useUserContext()!
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [skills, setSkills] = useState<Skill[]>([])

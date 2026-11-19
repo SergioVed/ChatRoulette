@@ -1,4 +1,5 @@
 export enum EventType {
+    NEXT="next",
     CONNECTED = 'connected',
     DISCONNECTED = 'disconnected',
     FIND_PARTNER = 'find-partner',
@@ -11,6 +12,7 @@ export enum EventType {
 }
 
 export type ServerMessage =
+    | {event: EventType.NEXT, data: {skillId: string}}
     | {event: EventType.AUTHENTICATE, data: {accessToken: string}}
     | {event: EventType.END_CALL, data: {initiator: boolean}}
     | {event: EventType.FIND_PARTNER, data: {skillId: string}}

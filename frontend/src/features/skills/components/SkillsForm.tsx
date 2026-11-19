@@ -1,11 +1,11 @@
 import styles from './SkillsForm.module.css'
 import { SkillItem } from './SkillItem.tsx'
-import {useContext, useEffect, useState} from 'react'
+import {useEffect, useState} from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSkills } from '../hooks/useSkills.ts'
 import { useDebounce } from '../../shared/hooks/useDebounce.ts'
 import {type SelectedSkill, SkillRole} from "../types.ts";
-import {UserContext} from "../../../shared/context/userContext.tsx";
+import {useUserContext} from "../../shared/hooks/useUserContext.ts";
 
 export const SkillsForm = () => {
 
@@ -14,7 +14,7 @@ export const SkillsForm = () => {
   const [name, setName] = useState('')
   const [selectedSkills, setSelectedSkills] = useState<SelectedSkill[]>([])
   const debouncedValue = useDebounce(name, 1000)
-  const {setCompletedOnBoarding} = useContext(UserContext)
+  const {setCompletedOnBoarding} = useUserContext()
 
   useEffect(() => {
     void getSkills()

@@ -185,6 +185,11 @@
   font-weight: 700;
 }
 
+.findButton:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
 .preview {
   padding: 23px 0 0 var(--space-34);
 }

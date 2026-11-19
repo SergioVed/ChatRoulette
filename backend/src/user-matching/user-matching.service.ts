@@ -1,5 +1,5 @@
-import { Injectable } from '@nestjs/common';
-import {QueueObj} from "./types";
+import {Injectable, UnauthorizedException} from '@nestjs/common';
+import {AuthenticatedUser, QueueObj} from "./types";
 import {UserSkillsService} from "../user-skills/user-skills.service";
 import {UserSkill} from "../user-skills/user-skill.entity";
 
@@ -8,14 +8,14 @@ export class UserMatchingService {
 
     private queue: QueueObj[]
     private partners: Map<WebSocket, WebSocket>
-    private socketUsers: Map<WebSocket, string>
+    private socketUsers: Map<WebSocket, AuthenticatedUser>
 
     constructor(
         private userSkillsService: UserSkillsService
     ) {
         this.queue = [];
         this.partners = new Map<WebSocket, WebSocket>()
-        this.socketUsers = new Map<WebSocket, string>()
+        this.socketUsers = new Map<WebSocket, AuthenticatedUser>()
 
     }
 
@@ -23,12 +23,29 @@ export class UserMatchingService {
         return this.socketUsers.get(client)
     }
 
-    public addClientToSocketUsers (client: WebSocket, userId: string) {
-        this.socketUsers.set(client, userId)
+    public addClientToSocketUsers (client: WebSocket, user: AuthenticatedUser) {
+        this.socketUsers.set(client, user)
     }
 
     public findPairedClient (client: WebSocket) {
         return this.partners.get(client)
+    }
+
+    public removeFromQueue (client: WebSocket) {
+        this.queue = this.queue.filter(socket => socket.client !== client);
+    }
+
+    public removeFromSocketUsers (client: WebSocket) {
+        this.socketUsers.delete(client)
+    }
+
+    public checkAuthenticatedSocket (client: WebSocket) {
+        const user = this.socketUsers.get(client)
+        if (!user || user.exp * 1000 < Date.now()) {
+            return false
+        }
+
+        return true
     }
 
     public removePair (client: WebSocket) {
@@ -43,7 +60,8 @@ export class UserMatchingService {
     public async addClientToQueue (requestingClient: WebSocket, skillId: string, userId: string) {
         const existing = this.queue.find((client) => client.client === requestingClient)
         if (existing || this.partners.has(requestingClient)) {
-            return
+            this.removeFromQueue(requestingClient)
+            this.partners.delete(requestingClient)
         }
 
         const currentUserSkill = await this.userSkillsService.findOne(userId, skillId)
@@ -51,10 +69,17 @@ export class UserMatchingService {
             return
         }
 
-        const partner = this.findPartner(skillId, currentUserSkill)
+        if (
+            requestingClient.readyState !== WebSocket.OPEN ||
+            !this.checkAuthenticatedSocket(requestingClient)
+        ) {
+            return
+        }
+
+        const partner = this.findPartner(currentUserSkill)
 
         if (partner != null) {
-            this.queue = this.queue.filter(client => client !== partner)
+            this.removeFromQueue(partner.client)
             this.matchClients(requestingClient, partner.client)
 
             return {
@@ -73,9 +98,12 @@ export class UserMatchingService {
         }
     }
 
-    private findPartner (skillId: string, requestingUser: UserSkill): QueueObj | null {
-        const client = this.queue.find(client => {
-            return client.skillId === requestingUser.skillId && client.role !== requestingUser.role
+    private findPartner (requestingUser: UserSkill): QueueObj | null {
+        const client = this.queue.find(entry => {
+            return entry.skillId === requestingUser.skillId &&
+                entry.role !== requestingUser.role &&
+                entry.client.readyState === WebSocket.OPEN &&
+                this.checkAuthenticatedSocket(entry.client)
         })
 
         return client ?? null
