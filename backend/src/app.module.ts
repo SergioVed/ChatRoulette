@@ -6,7 +6,7 @@ import {TypeOrmModule} from "@nestjs/typeorm";
 import { UserMatchingModule } from './user-matching/user-matching.module';
 import { SkillsModule } from './skills/skills.module';
 import { UserSkillsModule } from './user-skills/user-skills.module';
-import { OpenaiModule } from './openai/openai.module';
+import { AISummaryModule } from './AISummary/AISummary.module';
 
 @Module({
   imports: [
@@ -37,7 +37,7 @@ import { OpenaiModule } from './openai/openai.module';
 
     UserSkillsModule,
     SkillsModule,
-    OpenaiModule,
+    AISummaryModule,
   ],
 })
 export class AppModule {}

@@ -1,20 +1,20 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { OpenaiController } from './openai.controller';
+import { AISummaryService } from './AISummary.service';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 
-describe('OpenaiController', () => {
-  let controller: OpenaiController;
+describe('AISummaryService', () => {
+  let service: AISummaryService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      controllers: [OpenaiController],
+      providers: [AISummaryService],
     }).compile();
 
-    controller = module.get<OpenaiController>(OpenaiController);
+    service = module.get<AISummaryService>(AISummaryService);
   });
 
   it('should be defined', () => {
-    expect(controller).toBeDefined();
+    expect(service).toBeDefined();
   });
 });

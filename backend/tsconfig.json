@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "types": ["node"],
+    "types": ["node", "multer"],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "experimentalDecorators": true,

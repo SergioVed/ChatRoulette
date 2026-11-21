@@ -1,5 +1,8 @@
 import OpenAI from "openai";
 import { Injectable } from "@nestjs/common";
+import {Express} from "express";
+import Groq, {toFile} from "groq-sdk";
+import * as fs from "node:fs";
 
 
 const instructions = `
@@ -36,19 +39,37 @@ Guidelines:
 
 
 @Injectable()
-export class OpenaiService {
+export class AISummaryService {
     private readonly client = new OpenAI({
         apiKey: process.env.GROQ_API_KEY,
         baseURL: "https://api.groq.com/openai/v1",
     });
 
+    private groq = new Groq({apiKey: process.env.GROQ_API_KEY});
+
     async summarize(transcript: string): Promise<string> {
         const response = await this.client.responses.create({
-            model: "openai/gpt-oss-20b",
+            model: "AISummary/gpt-oss-20b",
             instructions: instructions,
             input: transcript,
         });
 
         return response.output_text;
+    }
+
+    async generateTranscription(file: Express.Multer.File): Promise<string> {
+         const newFile = await toFile(file.buffer, file.originalname, {
+             type: file.mimetype,
+         })
+
+        const transcription = await this.groq.audio.transcriptions.create({
+            file: newFile,
+            model: "whisper-large-v3",
+            temperature: 0,
+            response_format: "verbose_json",
+        });
+
+         console.log(transcription)
+        return transcription.text
     }
 }
