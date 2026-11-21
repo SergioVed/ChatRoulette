@@ -4,14 +4,14 @@ import PeerSession from "../rtc/peerSession.ts";
 import {WS_BASE_URL} from "../../../shared/api/http.ts";
 import {EventType, type ServerMessage} from "../transport/types.ts";
 import {useUserContext} from "../../shared/hooks/useUserContext.ts";
-import {useMediaRecord} from "../../recording/hooks/useMediaRecord.ts";
-import {getCombinedStreams} from "../../recording/utils/createMixedAudioStream.ts";
+// import {useMediaRecord} from "../../recording/hooks/useMediaRecord.ts";
+// import {getCombinedStreams} from "../../recording/utils/createMixedAudioStream.ts";
 
 
 export function useConversation (localStream: MediaStream | null) {
 
     const {token} = useUserContext()
-    const {startRecording, createMediaRecoder, stopRecording} = useMediaRecord()
+    // const {startRecording, createMediaRecoder, stopRecording} = useMediaRecord()
 
     const socket = useRef<ConversationSocket | null>(null)
     const peerConnection = useRef<PeerSession | null>(null)
@@ -20,16 +20,17 @@ export function useConversation (localStream: MediaStream | null) {
 
     const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null)
     const [connectionState, setConnectionState] = useState<RTCPeerConnectionState>('new')
+    const [connectionError, setConnectionError] = useState<string>('')
 
-    useEffect(() => {
-        if (connectionState === 'connected') {
-            const stream = getCombinedStreams(localStream, remoteStream)
-            createMediaRecoder(stream)
-
-            startRecording()
-        }
-
-    }, [connectionState])
+    // useEffect(() => {
+    //     if (connectionState === 'connected' && localStream !== null && remoteStream !== null) {
+    //         const stream = getCombinedStreams(localStream, remoteStream)
+    //         createMediaRecoder(stream)
+    //
+    //         startRecording()
+    //     }
+    //
+    // }, [connectionState, remoteStream, localStream])
 
     useEffect(() => {
         localStreamRef.current = localStream
@@ -47,9 +48,9 @@ export function useConversation (localStream: MediaStream | null) {
         // Listen to incoming messages
         socket.current.onMessage(async (message) => {
             try {
-                void handleMessages(message)
+                await handleMessages(message)
             } catch (error) {
-                console.error(error)
+                setConnectionError("Couldn't connect to partner")
             }
         })
 
@@ -155,7 +156,6 @@ export function useConversation (localStream: MediaStream | null) {
 
         peerSession.onRemoteStream((streams) => {
             setRemoteStream(streams[0] ?? null)
-            console.log("remote stream received")
         })
 
         peerSession.sendIceCandidate((candidate) => {
@@ -213,6 +213,9 @@ export function useConversation (localStream: MediaStream | null) {
     }
 
     async function endCall () {
+        // stopRecording()
+        cleanUpCall()
+
         const transport = socket.current
         if (!transport) {
             throw new Error('Transport is null')
@@ -222,9 +225,6 @@ export function useConversation (localStream: MediaStream | null) {
             event: EventType.END_CALL,
             data: {initiator: true}
         })
-
-        stopRecording()
-        cleanUpCall()
     }
 
     async function next (skillId: string) {
@@ -233,6 +233,7 @@ export function useConversation (localStream: MediaStream | null) {
             throw new Error('Transport is null')
         }
 
+        // stopRecording()
         replacePeerConnection()
 
         transport.sendMessage({
@@ -241,5 +242,5 @@ export function useConversation (localStream: MediaStream | null) {
         })
     }
 
-    return {remoteStream, connectionState, findPartner, endCall, next}
+    return {remoteStream, connectionState, connectionError, findPartner, endCall, next}
 }

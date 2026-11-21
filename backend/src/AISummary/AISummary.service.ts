@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { Injectable } from "@nestjs/common";
+import {BadGatewayException, BadRequestException, HttpException, Injectable} from "@nestjs/common";
 import {Express} from "express";
 import Groq, {toFile} from "groq-sdk";
 import * as fs from "node:fs";
@@ -49,7 +49,7 @@ export class AISummaryService {
 
     async summarize(transcript: string): Promise<string> {
         const response = await this.client.responses.create({
-            model: "AISummary/gpt-oss-20b",
+            model: "openai/gpt-oss-20b",
             instructions: instructions,
             input: transcript,
         });
@@ -58,18 +58,25 @@ export class AISummaryService {
     }
 
     async generateTranscription(file: Express.Multer.File): Promise<string> {
-         const newFile = await toFile(file.buffer, file.originalname, {
-             type: file.mimetype,
-         })
+        if (!file) {
+            throw new BadRequestException('Audio file is required');
+        }
 
-        const transcription = await this.groq.audio.transcriptions.create({
-            file: newFile,
-            model: "whisper-large-v3",
-            temperature: 0,
-            response_format: "verbose_json",
-        });
+        const newFile = await toFile(file.buffer, file.originalname, {
+            type: file.mimetype,
+        })
 
-         console.log(transcription)
-        return transcription.text
+        try {
+            const transcription = await this.groq.audio.transcriptions.create({
+                file: newFile,
+                model: "whisper-large-v3",
+                temperature: 0,
+                response_format: "verbose_json",
+            });
+            console.log(transcription.text)
+            return transcription.text
+        } catch (error) {
+            throw new BadGatewayException('Transcription service failed')
+        }
     }
 }

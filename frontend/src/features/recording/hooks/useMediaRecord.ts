@@ -1,38 +1,48 @@
 import {sendRecording} from "../api/sendRecording.ts";
+import {useRef} from "react";
+import {useUserContext} from "../../shared/hooks/useUserContext.ts";
 
 
 export function useMediaRecord () {
 
-    const chunks: Blob[] = []
-    let recorder: MediaRecorder;
+    const {token} = useUserContext()
+    const chunks = useRef<Blob[]>([])
+    const recorder = useRef<MediaRecorder | null>(null)
 
     function createMediaRecoder (stream: MediaStream) {
-        recorder = new MediaRecorder(stream);
+        recorder.current = new MediaRecorder(stream);
     }
 
     function startRecording () {
-        console.log("started recording")
+        const currentRecorder = recorder.current;
+        if (currentRecorder == null) {
+            return;
+        }
 
-        recorder.ondataavailable = (event) => {
+        currentRecorder.ondataavailable = (event) => {
             if (event.data.size > 0) {
-                chunks.push(event.data)
+                chunks.current.push(event.data)
             }
         }
 
-        recorder.start();
+        currentRecorder.start();
     }
 
     function stopRecording () {
-        console.log("stoped recording")
+        console.log("recording sent")
+        const currentRecorder = recorder.current;
+        if (currentRecorder == null) {
+            return;
+        }
 
-        recorder.stop()
+        currentRecorder.stop()
 
-        recorder.onstop = () => {
-            const audioBlob = new Blob(chunks, {
-                type: recorder.mimeType
+        currentRecorder.onstop = () => {
+            const audioBlob = new Blob(chunks.current, {
+                type: currentRecorder.mimeType
             })
 
-            void sendRecording(audioBlob)
+            void sendRecording(audioBlob, token)
         }
     }
 
