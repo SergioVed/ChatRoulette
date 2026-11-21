@@ -7,7 +7,7 @@ import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import {isUUID} from "class-validator";
-import {AuthenticatedUser} from "../user-matching/types";
+import {AuthenticatedUser} from "../chat/types";
 
 const hashingOptions = { type: argon2id, memoryCost: 65536, timeCost: 3, parallelism: 1 } as const;
 

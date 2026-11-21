@@ -3,7 +3,7 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import {ConfigModule, ConfigService} from "@nestjs/config";
 import {TypeOrmModule} from "@nestjs/typeorm";
-import { UserMatchingModule } from './user-matching/user-matching.module';
+import { ChatModule } from './chat/chat.module';
 import { SkillsModule } from './skills/skills.module';
 import { UserSkillsModule } from './user-skills/user-skills.module';
 import { AISummaryModule } from './AISummary/AISummary.module';
@@ -12,7 +12,7 @@ import { AISummaryModule } from './AISummary/AISummary.module';
   imports: [
       AuthModule,
       UsersModule,
-      UserMatchingModule,
+      ChatModule,
 
     ConfigModule.forRoot({
       isGlobal: true,
