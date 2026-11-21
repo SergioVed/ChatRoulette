@@ -4,7 +4,7 @@ import {UserSkillsService} from "../user-skills/user-skills.service";
 import {UserSkill} from "../user-skills/user-skill.entity";
 
 @Injectable()
-export class UserMatchingService {
+export class ChatService {
 
     private queue: QueueObj[]
     private partners: Map<WebSocket, WebSocket>
@@ -93,8 +93,6 @@ export class UserMatchingService {
                 skillId: skillId,
                 role: currentUserSkill.role
             })
-            console.log(this.queue)
-
         }
     }
 

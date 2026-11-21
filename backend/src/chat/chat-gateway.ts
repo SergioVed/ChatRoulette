@@ -6,7 +6,7 @@ import {
     SubscribeMessage,
     WebSocketGateway,
 } from "@nestjs/websockets";
-import {UserMatchingService} from "./user-matching.service";
+import {ChatService} from "./chat.service";
 import {EventType, EventType as Event} from "./types";
 import {MatchedMessage} from "./messages/MaatchedMessage";
 import {ConnectionMessage} from "./messages/ConnectionMessage";
@@ -16,10 +16,10 @@ import {EndCallMessage} from "./messages/EndCallMessage";
 import {AuthService} from "../auth/auth.service";
 
 @WebSocketGateway(4321)
-export class UserMatchingGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     constructor(
-        private userMatchingService: UserMatchingService,
+        private userMatchingService: ChatService,
         private authService: AuthService
     ) {}
 
