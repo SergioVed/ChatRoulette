@@ -2,7 +2,7 @@ import {type Dispatch, type SetStateAction, useEffect, useRef, useState} from "r
 import {ConversationSocket} from "../transport/conversationSocket.ts";
 import PeerSession from "../rtc/peerSession.ts";
 import {WS_BASE_URL} from "../../../shared/api/http.ts";
-import {EventType, type ServerMessage} from "../transport/types.ts";
+import {ErrorCode, EventType, type ServerMessage} from "../transport/types.ts";
 import {useUserContext} from "../../shared/hooks/useUserContext.ts";
 // import {useMediaRecord} from "../../recording/hooks/useMediaRecord.ts";
 // import {getCombinedStreams} from "../../recording/utils/createMixedAudioStream.ts";
@@ -147,6 +147,13 @@ export function useConversation (localStream: MediaStream | null) {
                     event: EventType.AUTHENTICATE,
                     data: {accessToken: token}
                 })
+
+                break;
+            }
+
+            case EventType.ERROR: {
+                const code = message.data.code
+                handleError(code)
             }
         }
     }
@@ -197,6 +204,29 @@ export function useConversation (localStream: MediaStream | null) {
         unsubscribeConnectionRef.current = unsubscribeConnection
     }
 
+    function handleError (code: ErrorCode) {
+        switch (code) {
+            case ErrorCode.AUTH_REQUIRED: {
+                setConnectionError("Your session has expired. Please log in again.");
+                break
+            }
+
+            case ErrorCode.INTERNAL_ERROR: {
+                setConnectionError("Something went wrong. Please try again.");
+                break;
+            }
+
+            case ErrorCode.MATCHMAKING_UNAVAILABLE: {
+                setConnectionError("Matchmaking is currently unavailable.");
+                break;
+            }
+
+            case ErrorCode.SKILL_NOT_ASSIGNED: {
+                setConnectionError("You dont have skills to connect with people")
+                break;
+            }
+        }
+    }
 
     async function findPartner (skillId: string) {
         const transport = socket.current
@@ -241,6 +271,24 @@ export function useConversation (localStream: MediaStream | null) {
             data: {skillId: skillId}
         })
     }
+
+
+
+
+
+    // async function testDisc(){
+    //     const transport = socket.current
+    //     if (!transport) {
+    //         throw new Error('Transport is null')
+    //     }
+    //
+    //     replacePeerConnection()
+    //
+    //     transport.sendMessage({
+    //         event: EventType.TEST_DISC,
+    //     })
+    // }
+
 
     return {remoteStream, connectionState, connectionError, findPartner, endCall, next}
 }

@@ -1,7 +1,8 @@
-import {Injectable, UnauthorizedException} from '@nestjs/common';
-import {AuthenticatedUser, QueueObj} from "./types";
+import {BadRequestException, Injectable, UnauthorizedException} from '@nestjs/common';
+import {AuthenticatedUser, ErrorCode, EventType, QueueObj} from "./types";
 import {UserSkillsService} from "../user-skills/user-skills.service";
 import {UserSkill} from "../user-skills/user-skill.entity";
+import WebSocket from 'ws';
 
 @Injectable()
 export class ChatService {
@@ -20,7 +21,13 @@ export class ChatService {
     }
 
     public getClientFromSocketUsers (client: WebSocket) {
-        return this.socketUsers.get(client)
+        const user = this.socketUsers.get(client)
+
+        if (!user || user.exp * 1000 < Date.now()) {
+            throw new UnauthorizedException()
+        }
+
+        return user
     }
 
     public addClientToSocketUsers (client: WebSocket, user: AuthenticatedUser) {
@@ -37,15 +44,6 @@ export class ChatService {
 
     public removeFromSocketUsers (client: WebSocket) {
         this.socketUsers.delete(client)
-    }
-
-    public checkAuthenticatedSocket (client: WebSocket) {
-        const user = this.socketUsers.get(client)
-        if (!user || user.exp * 1000 < Date.now()) {
-            return false
-        }
-
-        return true
     }
 
     public removePair (client: WebSocket) {
@@ -66,14 +64,15 @@ export class ChatService {
 
         const currentUserSkill = await this.userSkillsService.findOne(userId, skillId)
         if (!currentUserSkill) {
-            return
+            throw new BadRequestException(ErrorCode.SKILL_NOT_ASSIGNED);
         }
 
-        if (
-            requestingClient.readyState !== WebSocket.OPEN ||
-            !this.checkAuthenticatedSocket(requestingClient)
-        ) {
-            return
+        if (requestingClient.readyState !== WebSocket.OPEN) {
+            return;
+        }
+
+        if (!this.getClientFromSocketUsers(requestingClient)) {
+            throw new UnauthorizedException();
         }
 
         const partner = this.findPartner(currentUserSkill)
@@ -101,7 +100,7 @@ export class ChatService {
             return entry.skillId === requestingUser.skillId &&
                 entry.role !== requestingUser.role &&
                 entry.client.readyState === WebSocket.OPEN &&
-                this.checkAuthenticatedSocket(entry.client)
+                this.getClientFromSocketUsers(entry.client)
         })
 
         return client ?? null

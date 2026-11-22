@@ -7,16 +7,22 @@ import {
     WebSocketGateway,
 } from "@nestjs/websockets";
 import {ChatService} from "./chat.service";
-import {EventType, EventType as Event} from "./types";
+import {ErrorCode, EventType, EventType as Event} from "./types";
 import {MatchedMessage} from "./messages/MaatchedMessage";
 import {ConnectionMessage} from "./messages/ConnectionMessage";
-import { IceCandidateMessage } from './messages/IceCandidateMessage';
-import { OfferAnswerMessage } from './messages/OfferAnswerMessage';
+import {IceCandidateMessage} from './messages/IceCandidateMessage';
+import {OfferAnswerMessage} from './messages/OfferAnswerMessage';
 import {EndCallMessage} from "./messages/EndCallMessage";
 import {AuthService} from "../auth/auth.service";
+import WebSocket from 'ws';
+import {ErrorMessage} from "./messages/ErrorMessage";
+import {AuthenticatedMessage} from "./messages/AuthenticatedMessage";
+import {BadRequestException, UnauthorizedException} from "@nestjs/common";
 
 @WebSocketGateway(4321)
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
+
+    private ignoreClients:Set<WebSocket> = new Set()
 
     constructor(
         private userMatchingService: ChatService,
@@ -29,8 +35,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     handleDisconnect(client: WebSocket, reason?: string) {
-        client.send(JSON.stringify(new ConnectionMessage(EventType.DISCONNECTED, "client disconnected")))
-
         const partner = this.userMatchingService.findPairedClient(client)
 
         if (partner) {
@@ -44,40 +48,89 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     handleConnection(client: WebSocket, ...args: any[]) {
         client.send(JSON.stringify(new ConnectionMessage(EventType.CONNECTED, "client connected")))
+        this.setupHeartBeat(client)
     }
+
+    private setupHeartBeat (client: WebSocket) {
+        let isAlive = true;
+
+        client.on('pong', () => {
+            if (this.ignoreClients.has(client)) {
+                return
+            }
+
+            isAlive = true;
+            // console.log('pong')
+        })
+
+        const timeout = setInterval(() => {
+            if (client.readyState === WebSocket.OPEN) {
+                if (!isAlive) {
+                    client.terminate();
+                    return;
+                }
+
+                isAlive = false;
+                client.ping();
+            }
+        }, 5000)
+
+        client.on('close', () => clearInterval(timeout));
+    }
+    //
+    // @SubscribeMessage("test_disc")
+    // async handleTest (@ConnectedSocket() client: WebSocket) {
+    //     this.ignoreClients.add(client)
+    // }
 
     @SubscribeMessage(Event.AUTHENTICATE)
     async handleAuthenticate (@ConnectedSocket() client: WebSocket, @MessageBody() data: any) {
         if (data.accessToken == '' || data.accessToken == null) {
-            return;
+            client.send(JSON.stringify(new ErrorMessage(ErrorCode.AUTH_REQUIRED)))
+            client.close(1008, 'Authenticated user is required')
+            return
         }
 
-        const authenticatedUser = await this.authService.verifyToken(data.accessToken);
+        try {
+            const authenticatedUser = await this.authService.verifyToken(data.accessToken);
 
-        if (client.readyState === WebSocket.OPEN) {
-            this.userMatchingService.addClientToSocketUsers(client, authenticatedUser);
+            if (client.readyState !== WebSocket.OPEN) {
+                return
+            }
+
+            this.userMatchingService.addClientToSocketUsers(
+                client,
+                authenticatedUser
+            );
+
+            client.send(JSON.stringify(new AuthenticatedMessage()))
+        } catch (error) {
+            client.send(JSON.stringify(new ErrorMessage(ErrorCode.AUTH_REQUIRED)))
         }
     }
 
     @SubscribeMessage(Event.END_CALL)
-    handleEndCall(@ConnectedSocket() client: WebSocket, @MessageBody() data: any) {
-        if (!this.ensureAuthenticated(client)) {
-            return
-        }
+    handleEndCall(client: WebSocket, data: any) {
+        if (!this.requireAuthenticated(client)) return;
 
-        const partner = this.userMatchingService.findPairedClient(client)
-        this.userMatchingService.removePair(client)
+        this.endCall(client, data.initiator);
+    }
 
-        if (partner) {
-            partner.send(JSON.stringify(new EndCallMessage(data.initiator)))
+    private endCall(client: WebSocket, initiator: boolean) {
+        const partner = this.userMatchingService.findPairedClient(client);
+
+        this.userMatchingService.removePair(client);
+
+        if (partner?.readyState === WebSocket.OPEN) {
+            partner.send(JSON.stringify(new EndCallMessage(initiator)));
         }
     }
 
     @SubscribeMessage(Event.NEXT)
     async handleNext(@ConnectedSocket() client: WebSocket, @MessageBody() data: any) {
-        this.handleEndCall(client, {
-            initiator: true
-        })
+        if (!this.requireAuthenticated(client)) return;
+
+        this.endCall(client, true);
 
         await this.handleFindPartner(client, {
             skillId: data.skillId
@@ -86,42 +139,35 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     @SubscribeMessage(Event.ICE_CANDIDATE)
     handleIceCandidate(@ConnectedSocket() client: WebSocket, @MessageBody() data: any) {
-        if (!this.ensureAuthenticated(client)) {
-            return
-        }
+        if (!this.requireAuthenticated(client)) return
 
         const pairedClient = this.userMatchingService.findPairedClient(client)
-        if (pairedClient && pairedClient.readyState === WebSocket.OPEN) {
+
+        if (pairedClient?.readyState !== WebSocket.OPEN) return
+
+        if (pairedClient) {
             pairedClient.send(JSON.stringify(new IceCandidateMessage(data.candidate)));
         }
     }
 
     @SubscribeMessage(Event.ANSWER)
     handleAnswer(@ConnectedSocket() client: WebSocket, @MessageBody() data: any){
-        if (!this.ensureAuthenticated(client)) {
-            return
-        }
+        if (!this.requireAuthenticated(client)) return
+
         this.handleOfferAnswerEvent(Event.ANSWER, client, data)
     }
 
     @SubscribeMessage(Event.OFFER)
     handleOffer(@ConnectedSocket() client: WebSocket, @MessageBody() data: any){
-        if (!this.ensureAuthenticated(client)) {
-            return
-        }
+        if (!this.requireAuthenticated(client)) return
+
         this.handleOfferAnswerEvent(Event.OFFER, client, data)
     }
 
     @SubscribeMessage(Event.FIND_PARTNER)
     async handleFindPartner(@ConnectedSocket() client: WebSocket, @MessageBody() data: any) {
-        if (!this.ensureAuthenticated(client)) {
-            return
-        }
-
-        const authenticatedUser = this.userMatchingService.getClientFromSocketUsers(client)
-        if (!authenticatedUser?.userId) {
-            return;
-        }
+        const authenticatedUser = this.requireAuthenticated(client);
+        if (!authenticatedUser) return
 
         const pairedClient = this.userMatchingService.findPairedClient(client)
         if (pairedClient && pairedClient.readyState === WebSocket.OPEN) {
@@ -129,12 +175,21 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
         this.userMatchingService.removePair(client)
 
-        const match = await this.userMatchingService.addClientToQueue(client, data.skillId, authenticatedUser?.userId)
-        if (match) {
-            this.notifyUsers(match)
+        try {
+            const match = await this.userMatchingService.addClientToQueue(client, data.skillId, authenticatedUser.userId)
+            if (match) {
+                this.notifyUsers(match)
+            }
+        } catch (error) {
+            if (error instanceof UnauthorizedException) {
+                client.send(JSON.stringify(new ErrorMessage(ErrorCode.AUTH_REQUIRED)))
+            } else if (error instanceof BadRequestException) {
+                client.send(JSON.stringify(new ErrorMessage(ErrorCode.SKILL_NOT_ASSIGNED)))
+            } else {
+                client.send(JSON.stringify(new ErrorMessage(ErrorCode.INTERNAL_ERROR)))
+            }
         }
     }
-
 
     private handleOfferAnswerEvent (event: Event.OFFER | Event.ANSWER, @ConnectedSocket() client: WebSocket, @MessageBody() data: any) {
         const pairedClient = this.userMatchingService.findPairedClient(client)
@@ -143,12 +198,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
     }
 
-    private ensureAuthenticated (client: WebSocket) {
-        if (!this.userMatchingService.checkAuthenticatedSocket(client)) {
-            client.close(1008, 'Unauthorized')
-            return false;
+    private requireAuthenticated (client: WebSocket) {
+        try {
+            return this.userMatchingService.getClientFromSocketUsers(client);
+        } catch (error) {
+            if (client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify(new ErrorMessage(ErrorCode.AUTH_REQUIRED)));
+                client.close(1008, 'Authentication required');
+            }
         }
-        return true;
     }
-
 }
