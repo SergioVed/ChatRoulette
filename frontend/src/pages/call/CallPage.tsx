@@ -16,6 +16,7 @@ export type CallPageProps = {
 
 export const CallPage = ({media, conversation, skillId}: CallPageProps) => {
 
+
   return (
       <div className={shell.page}>
         <header className={shell.header}>
@@ -57,6 +58,7 @@ export const CallPage = ({media, conversation, skillId}: CallPageProps) => {
               </div>
               <EndCallButton onClick={conversation.endCall}/>
               <NextTeacherButton onClick={() => conversation.next(skillId)}/>
+              {/*<button onClick={conversation.testDisc}>test disc</button>*/}
             </div>
           </section>
         </main>
