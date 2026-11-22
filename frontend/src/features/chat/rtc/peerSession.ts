@@ -18,14 +18,14 @@ class PeerSession {
 
         await this.connection.setLocalDescription(answer)
 
-        this.flushPendingCandidates()
+        await this.flushPendingCandidates()
 
         return answer;
     }
 
     async handleAnswer(description: RTCSessionDescriptionInit){
         await this.connection.setRemoteDescription(description)
-        this.flushPendingCandidates()
+        await this.flushPendingCandidates()
     }
 
     async createOffer(){
