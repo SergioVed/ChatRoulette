@@ -15,8 +15,9 @@ async function start() {
         transform: true,
       })
   )
+
     app.enableCors({
-        origin: 'http://localhost:5173',
+        origin: ['http://localhost:5173', 'https://paid-colleges-nickel-gibson.trycloudflare.com'],
         methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
         credentials: true,
     });
