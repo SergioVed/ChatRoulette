@@ -67,19 +67,19 @@ export class UserSkillsService {
     });
   }
 
-  async findOne(userId: string, skillId: string): Promise<UserSkill> {
+  async findOne(userId: string, skillId: string): Promise<UserSkill | null> {
     const assignment = await this.assignments.findOne({
       where: { userId, skillId }, relations: { skill: true },
     });
 
     if (!assignment){
-      throw new NotFoundException('Skill assignment not found');
+      return null
     }
 
     return assignment;
   }
 
-  async update(userId: string, skillId: string, dto: UpdateUserSkillDto): Promise<UserSkill> {
+  async update(userId: string, skillId: string, dto: UpdateUserSkillDto): Promise<UserSkill | null> {
     if (dto.role !== undefined) {
       const result = await this.assignments.update({ userId, skillId }, { role: dto.role });
       if (!result.affected) {

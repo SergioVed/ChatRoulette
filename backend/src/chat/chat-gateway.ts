@@ -17,7 +17,7 @@ import {AuthService} from "../auth/auth.service";
 import WebSocket from 'ws';
 import {ErrorMessage} from "./messages/ErrorMessage";
 import {AuthenticatedMessage} from "./messages/AuthenticatedMessage";
-import {BadRequestException, UnauthorizedException} from "@nestjs/common";
+import {BadRequestException, NotFoundException, UnauthorizedException} from "@nestjs/common";
 
 @WebSocketGateway(4321)
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
