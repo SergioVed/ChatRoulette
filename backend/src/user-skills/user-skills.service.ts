@@ -19,7 +19,7 @@ export class UserSkillsService {
   ) {}
 
   async create(userId: string, dto: CreateUserSkillDto): Promise<CreateUserSkillsResponse> {
-    if (dto.skillIds.length === 0) {
+    if (dto.skills.length === 0) {
       throw new ForbiddenException('Skills should not be empty');
     }
 
@@ -27,9 +27,12 @@ export class UserSkillsService {
       try {
         const addedSkills: UserSkill[] = [];
 
-        for (const skillId of dto.skillIds) {
-          await this.skills.findOne(skillId, manager);
-          const where = { userId, skillId };
+        for (const skill of dto.skills) {
+          await this.skills.findOne(skill.skillId, manager);
+          const where = {
+            userId,
+            skillId: skill.skillId
+          };
 
           if (await manager.existsBy(UserSkill, where)) {
             throw new ConflictException('Skill is already assigned');
@@ -37,7 +40,7 @@ export class UserSkillsService {
 
           const assignment = manager.create(UserSkill, {
             ...where,
-            role: dto.role,
+            role: skill.role,
           });
 
           const saved = await manager.save(UserSkill, assignment);
