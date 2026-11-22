@@ -25,21 +25,18 @@ export const ConversationSettings = ({setSkillId, skillId}: ConversationSettings
     }, [skills, skillId, setSkillId])
 
     return (
-        <>
-            <div className={styles.skillField}>
-                <label htmlFor="skill">Skill</label>
-                <div className={styles.selectWrapper}>
-                    <select id="skill" value={skillId ?? ''} onChange={(event) => setSkillId(event.target.value)}>
-                        {skills.map((skill: UserSkill) => (
-                            <option key={skill.skillId} value={skill.skill.id}>{skill.skill.name}</option>
-                        ))}
-                    </select>
-                    <svg className={styles.chevron} viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="m5 9 7 7 7-7" />
-                    </svg>
-                </div>
+        <div className={styles.skillField}>
+            <label htmlFor="skill">Skill</label>
+            <div className={styles.selectWrapper}>
+                <select id="skill" value={skillId ?? ''} onChange={(event) => setSkillId(event.target.value)}>
+                    {skills.map((skill: UserSkill) => (
+                        <option key={skill.skillId} value={skill.skill.id}>{skill.skill.name}</option>
+                    ))}
+                </select>
+                <svg className={styles.chevron} viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="m5 9 7 7 7-7" />
+                </svg>
             </div>
-        </>
+        </div>
     )
-
 }

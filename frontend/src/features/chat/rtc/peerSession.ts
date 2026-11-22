@@ -18,14 +18,14 @@ class PeerSession {
 
         await this.connection.setLocalDescription(answer)
 
-        this.flushPendingCandidates()
+        await this.flushPendingCandidates()
 
         return answer;
     }
 
     async handleAnswer(description: RTCSessionDescriptionInit){
         await this.connection.setRemoteDescription(description)
-        this.flushPendingCandidates()
+        await this.flushPendingCandidates()
     }
 
     async createOffer(){
@@ -81,9 +81,9 @@ class PeerSession {
 
     private async flushPendingCandidates () {
         if (this.pendingCandidates.length !== 0) {
-            this.pendingCandidates.forEach((candidate: RTCIceCandidate) => {
-                this.connection.addIceCandidate(candidate)
-            })
+            for (const candidate of this.pendingCandidates) {
+                await this.connection.addIceCandidate(candidate)
+            }
         }
 
         this.pendingCandidates = []

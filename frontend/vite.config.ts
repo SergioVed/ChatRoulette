@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => ({
       },
     },
     allowedHosts: [
-      'elder-justin-hans-elderly.trycloudflare.com',
+      'paid-colleges-nickel-gibson.trycloudflare.com',
     ],
   },
 }))

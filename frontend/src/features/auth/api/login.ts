@@ -1,12 +1,10 @@
-import { authRequest } from './authRequest.ts'
 import type { AuthResponse } from '../types.ts'
 import type {LoginInput} from "../types.ts";
+import {apiRequest} from "../../../shared/api/http.ts";
 
 export function login(input: LoginInput): Promise<AuthResponse> {
-  return authRequest('login', {
-    ...input,
-    email: input.email.trim().toLowerCase(),
-  }, 'Login is unavailable right now. Please try again.', {
-    401: 'Invalid email or password.',
+  return apiRequest('auth/login', {
+    body: JSON.stringify(input),
+    method: 'POST',
   })
 }
