@@ -8,6 +8,7 @@ export enum EventType {
     OFFER = 'offer',
     ANSWER = 'answer',
     AUTHENTICATE="authenticate",
+    AUTHENTICATED="authenticated",
     ICE_CANDIDATE = 'ice-candidate',
     ERROR = 'error'
     // TEST_DISC = 'test_disc'
@@ -15,6 +16,7 @@ export enum EventType {
 
 export type ServerMessage =
     | {event: EventType.ERROR, data: {code: ErrorCode}}
+    | {event: EventType.AUTHENTICATED}
     | {event: EventType.NEXT, data: {skillId: string}}
     | {event: EventType.AUTHENTICATE, data: {accessToken: string}}
     | {event: EventType.END_CALL, data: {initiator: boolean}}

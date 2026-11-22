@@ -21,6 +21,7 @@ export function useConversation (localStream: MediaStream | null) {
     const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null)
     const [connectionState, setConnectionState] = useState<RTCPeerConnectionState>('new')
     const [connectionError, setConnectionError] = useState<string>('')
+    const [authenticated, setAuthenticated] = useState<boolean>(false)
 
     // useEffect(() => {
     //     if (connectionState === 'connected' && localStream !== null && remoteStream !== null) {
@@ -154,6 +155,12 @@ export function useConversation (localStream: MediaStream | null) {
             case EventType.ERROR: {
                 const code = message.data.code
                 handleError(code)
+                break
+            }
+
+            case EventType.AUTHENTICATED: {
+                setAuthenticated(true)
+                break
             }
         }
     }
@@ -229,6 +236,10 @@ export function useConversation (localStream: MediaStream | null) {
     }
 
     async function findPartner (skillId: string) {
+        if (!authenticated) {
+            return
+        }
+
         const transport = socket.current
         if (!transport) {
             throw new Error('Transport is null')
