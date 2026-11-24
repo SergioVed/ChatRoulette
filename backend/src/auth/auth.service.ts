@@ -8,6 +8,7 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import {isUUID} from "class-validator";
 import {AuthenticatedUser} from "../chat/types";
+import {AuthMeResponse} from "./dto/authMeResponse.dto";
 
 const hashingOptions = { type: argon2id, memoryCost: 65536, timeCost: 3, parallelism: 1 } as const;
 
@@ -63,10 +64,7 @@ export class AuthService implements OnModuleInit {
       throw new NotFoundException('User not found')
     }
 
-    return {
-      id: user.id,
-      onBoardingCompleted: user.onboardingCompleted
-    }
+    return new AuthMeResponse(userId, user.onboardingCompleted, user.name)
   }
 
   private async createToken(userId: string): Promise<{ accessToken: string }> {

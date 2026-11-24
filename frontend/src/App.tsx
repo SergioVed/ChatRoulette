@@ -13,28 +13,34 @@ const publicRoutes = [
 ]
 
 function ProtectedLayout() {
-  const { token, completedOnBoarding } = useContext(UserContext)!
-
+  const { token, user } = useContext(UserContext)!
   if (!token) return <Navigate to="/login" replace />
-  if (completedOnBoarding === null) return null
-  if (!completedOnBoarding) return <Navigate to="/setup-skills" replace />
+
+  if (!user) return <p role="status">Loading your account…</p>
+
+  if (user.onBoardingCompleted === null) return null
+  if (!user.onBoardingCompleted) return <Navigate to="/setup-skills" replace />
   return <Outlet />
 }
 
 function PublicLayout() {
-  const { token, completedOnBoarding } = useContext(UserContext)!
-
+  const { token, user } = useContext(UserContext)!
   if (!token) return <Outlet />
-  if (completedOnBoarding === null) return null
-  return <Navigate to={completedOnBoarding ? '/' : '/setup-skills'} replace />
+
+  if (!user) return <p role="status">Loading your account…</p>
+
+  if (user.onBoardingCompleted === null) return null
+  return <Navigate to={user.onBoardingCompleted ? '/' : '/setup-skills'} replace />
 }
 
 function SetupLayout() {
-  const { token, completedOnBoarding } = useContext(UserContext)!
-
+  const { token, user } = useContext(UserContext)!
   if (!token) return <Navigate to="/login" replace />
-  if (completedOnBoarding === null) return null
-  if (completedOnBoarding) return <Navigate to="/" replace />
+
+  if (!user) return <p role="status">Loading your account…</p>
+
+  if (user.onBoardingCompleted == null) return null
+  if (user.onBoardingCompleted) return <Navigate to="/" replace />
   return <Outlet />
 }
 
