@@ -1,9 +1,9 @@
-import {type Dispatch, type SetStateAction, useEffect, useRef, useState} from "react";
+import {useEffect, useRef, useState} from "react";
 import {ConversationSocket} from "../transport/conversationSocket.ts";
-import PeerSession from "../rtc/peerSession.ts";
 import {WS_BASE_URL} from "../../../shared/api/http.ts";
 import {ErrorCode, EventType, type ServerMessage} from "../transport/types.ts";
 import {useUserContext} from "../../shared/hooks/useUserContext.ts";
+import {usePeerConnection} from "./usePeerConnection.ts";
 // import {useMediaRecord} from "../../recording/hooks/useMediaRecord.ts";
 // import {getCombinedStreams} from "../../recording/utils/createMixedAudioStream.ts";
 
@@ -13,13 +13,29 @@ export function useConversation (localStream: MediaStream | null) {
     const {token} = useUserContext()
     // const {startRecording, createMediaRecoder, stopRecording} = useMediaRecord()
 
+    const {
+        remoteStream,
+        connectionState,
+        cleanUpCall,
+        replacePeerConnection,
+        getPeerConnection
+    } = usePeerConnection((candidate) => {
+        const transport = socket.current;
+
+        if (!transport) {
+            throw new Error("Transport is null");
+        }
+
+        transport.sendMessage({
+            event: EventType.ICE_CANDIDATE,
+            data: {
+                candidate: candidate.toJSON()
+            }
+        });
+    })
     const socket = useRef<ConversationSocket | null>(null)
-    const peerConnection = useRef<PeerSession | null>(null)
-    const unsubscribeConnectionRef = useRef<(() => void) | null>(null)
     const localStreamRef = useRef<MediaStream | null>(localStream)
 
-    const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null)
-    const [connectionState, setConnectionState] = useState<RTCPeerConnectionState>('new')
     const [socketReady, setSocketReady] = useState<boolean>(false)
     const [connectionError, setConnectionError] = useState<string>('')
     const [authenticated, setAuthenticated] = useState<boolean>(false)
@@ -40,14 +56,8 @@ export function useConversation (localStream: MediaStream | null) {
 
 
     useEffect(() => {
-        // Starting up with assigning and creating connections
         socket.current = new ConversationSocket(WS_BASE_URL)
-        const {unsubscribeConnection, peerSession} = setupPeerConnection(setConnectionState);
 
-        unsubscribeConnectionRef.current = unsubscribeConnection
-        peerConnection.current = peerSession;
-
-        // Listen to incoming messages
         socket.current.onMessage(async (message) => {
             try {
                 await handleMessages(message)
@@ -57,13 +67,7 @@ export function useConversation (localStream: MediaStream | null) {
         })
 
         return () => {
-            if (!unsubscribeConnectionRef.current || !socket.current || !peerConnection.current) {
-                throw new Error('Connection failed');
-            }
-
-            unsubscribeConnectionRef.current()
             socket.current.close();
-            peerConnection.current.close();
         }
     }, [])
 
@@ -73,7 +77,7 @@ export function useConversation (localStream: MediaStream | null) {
             case EventType.MATCHED: {
                 const transport = socket.current
                 const stream = localStreamRef.current
-                const peer = peerConnection.current
+                const peer = getPeerConnection()
 
                 if (!peer || !transport || !stream) {
                     throw new Error('Local media is not ready')
@@ -99,7 +103,7 @@ export function useConversation (localStream: MediaStream | null) {
             }
 
             case EventType.OFFER: {
-                const peer = peerConnection.current
+                const peer = getPeerConnection()
                 const transport = socket.current
                 if (!peer || !transport) {
                     throw new Error('Peer connection or transport is null')
@@ -115,7 +119,7 @@ export function useConversation (localStream: MediaStream | null) {
             }
 
             case EventType.ANSWER: {
-                const peer = peerConnection.current
+                const peer = getPeerConnection()
                 if (!peer) {
                     throw new Error('Peer connection is null')
                 }
@@ -125,7 +129,7 @@ export function useConversation (localStream: MediaStream | null) {
             }
 
             case EventType.ICE_CANDIDATE: {
-                const peer = peerConnection.current
+                const peer = getPeerConnection()
                 if (!peer) {
                     throw new Error('Peer connection is null')
                 }
@@ -167,51 +171,7 @@ export function useConversation (localStream: MediaStream | null) {
         }
     }
 
-     function setupPeerConnection (setConnectionState: Dispatch<SetStateAction<RTCPeerConnectionState>>) {
-        const peerSession = new PeerSession()
 
-        peerSession.onRemoteStream((streams) => {
-            setRemoteStream(streams[0] ?? null)
-        })
-
-        peerSession.sendIceCandidate((candidate) => {
-            const transport = socket.current
-            if (!transport) {
-                throw new Error('Transport is null')
-            }
-
-            transport.sendMessage({
-                event: EventType.ICE_CANDIDATE,
-                data: {
-                    candidate: candidate.toJSON(),
-                },
-            })
-        })
-
-        const unsubscribeConnection = peerSession.onConnectionStateChange(setConnectionState)
-        return {peerSession, unsubscribeConnection}
-    }
-
-    function cleanUpCall () {
-        unsubscribeConnectionRef.current?.()
-        unsubscribeConnectionRef.current = null
-
-        peerConnection.current?.close()
-        peerConnection.current = null;
-
-        setRemoteStream(null)
-        setConnectionState('closed')
-    }
-
-    function replacePeerConnection () {
-        cleanUpCall()
-
-        const { peerSession, unsubscribeConnection } =
-            setupPeerConnection(setConnectionState)
-
-        peerConnection.current = peerSession
-        unsubscribeConnectionRef.current = unsubscribeConnection
-    }
 
     function handleError (code: ErrorCode) {
         switch (code) {
@@ -219,17 +179,14 @@ export function useConversation (localStream: MediaStream | null) {
                 setConnectionError("Your session has expired. Please log in again.");
                 break
             }
-
             case ErrorCode.INTERNAL_ERROR: {
                 setConnectionError("Something went wrong. Please try again.");
                 break;
             }
-
             case ErrorCode.MATCHMAKING_UNAVAILABLE: {
                 setConnectionError("Matchmaking is currently unavailable.");
                 break;
             }
-
             case ErrorCode.SKILL_NOT_ASSIGNED: {
                 setConnectionError("You dont have skills to connect with people")
                 break;
@@ -284,10 +241,6 @@ export function useConversation (localStream: MediaStream | null) {
             data: {skillId: skillId}
         })
     }
-
-
-
-
 
     // async function testDisc(){
     //     const transport = socket.current
