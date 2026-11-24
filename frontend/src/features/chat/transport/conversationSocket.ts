@@ -9,6 +9,14 @@ export class ConversationSocket {
         this.socket = new WebSocket(API_URL)
     }
 
+    get isOpen() {
+        return this.socket.readyState === WebSocket.OPEN
+    }
+
+    onClose(handler: () => void) {
+        this.socket.onclose = handler
+    }
+
     onMessage(handler: (message: ServerMessage) => void){
         this.socket.onmessage = (event: MessageEvent) => {
             handler(JSON.parse(event.data))
@@ -20,6 +28,8 @@ export class ConversationSocket {
     }
 
     close(){
+        this.socket.onmessage = null
+        this.socket.onclose = null
         this.socket.close()
     }
 

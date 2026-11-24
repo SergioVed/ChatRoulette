@@ -4,6 +4,8 @@ import {WS_BASE_URL} from "../../../shared/api/http.ts";
 import {ErrorCode, EventType, type ServerMessage} from "../transport/types.ts";
 import {useUserContext} from "../../shared/hooks/useUserContext.ts";
 import {usePeerConnection} from "./usePeerConnection.ts";
+import {ConversationState, type Partner} from "../types.ts";
+import {useLogout} from "../../auth/hooks/useLogout.tsx";
 // import {useMediaRecord} from "../../recording/hooks/useMediaRecord.ts";
 // import {getCombinedStreams} from "../../recording/utils/createMixedAudioStream.ts";
 
@@ -11,6 +13,7 @@ import {usePeerConnection} from "./usePeerConnection.ts";
 export function useConversation (localStream: MediaStream | null) {
 
     const {token} = useUserContext()
+    const {logout} = useLogout()
     // const {startRecording, createMediaRecoder, stopRecording} = useMediaRecord()
 
     const {
@@ -37,8 +40,11 @@ export function useConversation (localStream: MediaStream | null) {
     const localStreamRef = useRef<MediaStream | null>(localStream)
 
     const [socketReady, setSocketReady] = useState<boolean>(false)
+    const [conversationState, setConversationState] = useState<ConversationState>(ConversationState.IDLE)
+
     const [connectionError, setConnectionError] = useState<string>('')
     const [authenticated, setAuthenticated] = useState<boolean>(false)
+    const [partner, setPartner] = useState<Partner | null>(null)
 
     // useEffect(() => {
     //     if (connectionState === 'connected' && localStream !== null && remoteStream !== null) {
@@ -68,6 +74,7 @@ export function useConversation (localStream: MediaStream | null) {
 
         return () => {
             socket.current.close();
+            setPartner(null)
         }
     }, [])
 
@@ -75,15 +82,22 @@ export function useConversation (localStream: MediaStream | null) {
     async function handleMessages (message: ServerMessage) {
         switch (message.event) {
             case EventType.MATCHED: {
+                setConversationState(ConversationState.MATCHED)
+
                 const transport = socket.current
                 const stream = localStreamRef.current
                 const peer = getPeerConnection()
-
                 if (!peer || !transport || !stream) {
                     throw new Error('Local media is not ready')
                 }
 
                 await peer.addLocalStream(stream)
+
+                const partner:Partner = {
+                    name: message.data.userName,
+                    skill: message.data.skillName
+                }
+                setPartner(partner)
 
                 if (message.data.initiator) {
                     const description = await peer.createOffer()
@@ -93,11 +107,12 @@ export function useConversation (localStream: MediaStream | null) {
                         data: {description},
                     })
                 }
-
                 break
             }
 
             case EventType.END_CALL: {
+                setConversationState(ConversationState.IDLE)
+
                 replacePeerConnection()
                 break;
             }
@@ -161,6 +176,7 @@ export function useConversation (localStream: MediaStream | null) {
             case EventType.ERROR: {
                 const code = message.data.code
                 handleError(code)
+                setConversationState(ConversationState.IDLE)
                 break
             }
 
@@ -177,6 +193,8 @@ export function useConversation (localStream: MediaStream | null) {
         switch (code) {
             case ErrorCode.AUTH_REQUIRED: {
                 setConnectionError("Your session has expired. Please log in again.");
+                setConversationState(ConversationState.IDLE)
+                logout()
                 break
             }
             case ErrorCode.INTERNAL_ERROR: {
@@ -185,16 +203,20 @@ export function useConversation (localStream: MediaStream | null) {
             }
             case ErrorCode.MATCHMAKING_UNAVAILABLE: {
                 setConnectionError("Matchmaking is currently unavailable.");
+                setConversationState(ConversationState.IDLE);
                 break;
             }
             case ErrorCode.SKILL_NOT_ASSIGNED: {
                 setConnectionError("You dont have skills to connect with people")
+                setConversationState(ConversationState.IDLE);
                 break;
             }
         }
     }
 
     async function findPartner (skillId: string) {
+        setConnectionError('')
+
         if (!authenticated) {
             return
         }
@@ -210,9 +232,11 @@ export function useConversation (localStream: MediaStream | null) {
             event: EventType.FIND_PARTNER,
             data: {skillId: skillId}
         })
+        setConversationState(ConversationState.SEARCHING)
     }
 
     async function endCall () {
+        setConversationState(ConversationState.IDLE)
         // stopRecording()
         cleanUpCall()
 
@@ -225,6 +249,8 @@ export function useConversation (localStream: MediaStream | null) {
             event: EventType.END_CALL,
             data: {initiator: true}
         })
+
+        setPartner(null)
     }
 
     async function next (skillId: string) {
@@ -240,6 +266,7 @@ export function useConversation (localStream: MediaStream | null) {
             event: EventType.NEXT,
             data: {skillId: skillId}
         })
+        setConversationState(ConversationState.SEARCHING)
     }
 
     // async function testDisc(){
@@ -256,5 +283,16 @@ export function useConversation (localStream: MediaStream | null) {
     // }
 
 
-    return {remoteStream, connectionState, connectionError, findPartner, endCall, next, socketReady}
+    return {
+        remoteStream,
+        connectionState,
+        connectionError,
+        socketReady,
+        partner,
+        conversationState,
+
+        findPartner,
+        endCall,
+        next
+    }
 }
