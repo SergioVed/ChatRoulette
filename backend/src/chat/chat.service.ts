@@ -62,7 +62,7 @@ export class ChatService {
     public async findPartnerOrQueueClient (requestingClient: WebSocket, skillId: string, userId: string) {
         if (this.isInQueue(requestingClient) || this.isPartner(requestingClient)) {
             this.removeFromQueue(requestingClient)
-            this.partners.delete(requestingClient)
+            this.removePair(requestingClient)
         }
 
         const currentUserSkill = await this.userSkillsService.findOne(userId, skillId)
@@ -84,11 +84,11 @@ export class ChatService {
                 receiver: partner.client
             }
         } else {
-            await this.addToQueue(requestingClient, currentUserSkill)
+            this.addToQueue(requestingClient, currentUserSkill)
         }
     }
 
-    private async addToQueue (client: WebSocket, userSkill: UserSkill) {
+    private addToQueue (client: WebSocket, userSkill: UserSkill) {
         const userData: UserData = {
             userId: userSkill.user.id,
             name: userSkill.user.name
@@ -117,9 +117,7 @@ export class ChatService {
             return false;
         }
 
-        if (!this.getClientFromAuthenticatedSocketUsers(client)) {
-            throw new UnauthorizedException();
-        }
+        this.getClientFromAuthenticatedSocketUsers(client);
 
         return true
     }
@@ -156,11 +154,6 @@ export class ChatService {
         if (waitingClient) {
             this.partners.set(client, waitingClient)
             this.partners.set(waitingClient, client)
-        }
-
-        return {
-            initiator: waitingClient,
-            receiver: client
         }
     }
 
