@@ -11,12 +11,8 @@ export class SkillsService {
     return this.skills.find();
   }
 
-  async findOne(id: string, manager?: EntityManager): Promise<Skill> {
+  async findOne(id: string, manager?: EntityManager): Promise<Skill | null> {
     const skills = manager?.getRepository(Skill) ?? this.skills;
-    const skill = await skills.findOne({ where: { id } });
-    if (!skill) {
-      throw new NotFoundException('Skill not found');
-    }
-    return skill;
+    return await skills.findOne({ where: { id } });
   }
 }
