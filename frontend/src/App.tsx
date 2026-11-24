@@ -4,11 +4,8 @@ import { UserContext } from './shared/context/userContext.tsx'
 import LoginPage from './pages/auth/LoginPage.tsx'
 import RegisterPage from './pages/auth/RegisterPage.tsx'
 import { SkillsSetupPage } from './pages/skills/SkillsSetupPage.tsx'
-import {Chat} from "./pages/call";
-
-const protectedRoutes = [
-  { path: '/', element: <Chat /> },
-]
+import { Chat } from './pages/call'
+import { Layout } from './pages/layout.tsx'
 
 const publicRoutes = [
   { path: '/login', element: <LoginPage /> },
@@ -46,9 +43,9 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route element={<ProtectedLayout />}>
-          {protectedRoutes.map(({ path, element }) => (
-            <Route key={path} path={path} element={element} />
-          ))}
+          <Route element={<Layout />}>
+            <Route index element={<Chat />} />
+          </Route>
         </Route>
         <Route element={<PublicLayout />}>
           {publicRoutes.map(({ path, element }) => (
