@@ -36,7 +36,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
 
         this.userMatchingService.removePair(client)
-        this.userMatchingService.removeFromQueue(client)
+        this.userMatchingService.cancelSearch(client)
         this.userMatchingService.removeFromAuthenticatedSocketUsers(client)
     }
 
@@ -97,7 +97,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     handleEndCall(client: WebSocket, data: any) {
         if (!this.requireAuthenticated(client)) return;
 
+        this.userMatchingService.cancelSearch(client);
         this.endCall(client, data.initiator);
+
+        if (data.cancelSearch && client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify(new EndCallMessage(true, true)));
+        }
     }
 
     private endCall(client: WebSocket, initiator: boolean) {

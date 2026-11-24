@@ -13,6 +13,7 @@ import {UserSkillRole} from "../user-skills/types";
 export class ChatService {
 
     private queue: QueueObj[]
+    private readonly pendingSearches = new Map<WebSocket, symbol>()
     private partners: Map<WebSocket, WebSocket>
     private authenticatedSocketUsers: Map<WebSocket, AuthenticatedUser>
 
@@ -46,6 +47,11 @@ export class ChatService {
         this.queue = this.queue.filter(socket => socket.client !== client);
     }
 
+    public cancelSearch (client: WebSocket) {
+        this.pendingSearches.delete(client)
+        this.removeFromQueue(client)
+    }
+
     public removeFromAuthenticatedSocketUsers (client: WebSocket) {
         this.authenticatedSocketUsers.delete(client)
     }
@@ -65,7 +71,20 @@ export class ChatService {
             this.removePair(requestingClient)
         }
 
-        const currentUserSkill = await this.userSkillsService.findOne(userId, skillId)
+        const search = Symbol()
+        this.pendingSearches.set(requestingClient, search)
+
+        let currentUserSkill: UserSkill | null
+        try {
+            currentUserSkill = await this.userSkillsService.findOne(userId, skillId)
+        } catch (error) {
+            if (this.pendingSearches.get(requestingClient) !== search) return null
+            this.pendingSearches.delete(requestingClient)
+            throw error
+        }
+
+        if (this.pendingSearches.get(requestingClient) !== search) return null
+        this.pendingSearches.delete(requestingClient)
         if (!currentUserSkill) {
             throw new BadRequestException()
         }
