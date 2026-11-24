@@ -14,3 +14,14 @@ export interface UserSkill {
     role: UserRole,
     skill: Skill
 }
+
+export interface Partner {
+    name: string,
+    skill: string
+}
+
+export enum ConversationState {
+    IDLE="idle",
+    SEARCHING="searching",
+    MATCHED="matched"
+}

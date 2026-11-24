@@ -1,5 +1,5 @@
 import {BadRequestException, Injectable, NotFoundException, UnauthorizedException} from '@nestjs/common';
-import {AuthenticatedUser, ErrorCode, QueueObj, SkillData, UserData} from "./types";
+import {AuthenticatedUser, ErrorCode, PairedUsersResponse, QueueObj, SkillData, UserData} from "./types";
 import {UserSkillsService} from "../user-skills/user-skills.service";
 import {UserSkill} from "../user-skills/user-skill.entity";
 import WebSocket from 'ws';
@@ -13,6 +13,7 @@ import {UserSkillRole} from "../user-skills/types";
 export class ChatService {
 
     private queue: QueueObj[]
+    private readonly pendingSearches = new Map<WebSocket, symbol>()
     private partners: Map<WebSocket, WebSocket>
     private authenticatedSocketUsers: Map<WebSocket, AuthenticatedUser>
 
@@ -46,6 +47,11 @@ export class ChatService {
         this.queue = this.queue.filter(socket => socket.client !== client);
     }
 
+    public cancelSearch (client: WebSocket) {
+        this.pendingSearches.delete(client)
+        this.removeFromQueue(client)
+    }
+
     public removeFromAuthenticatedSocketUsers (client: WebSocket) {
         this.authenticatedSocketUsers.delete(client)
     }
@@ -59,19 +65,32 @@ export class ChatService {
         }
     }
 
-    public async findPartnerOrQueueClient (requestingClient: WebSocket, skillId: string, userId: string) {
+    public async findPartnerOrQueueClient (requestingClient: WebSocket, skillId: string, userId: string): Promise<PairedUsersResponse | null> {
         if (this.isInQueue(requestingClient) || this.isPartner(requestingClient)) {
             this.removeFromQueue(requestingClient)
-            this.partners.delete(requestingClient)
+            this.removePair(requestingClient)
         }
 
-        const currentUserSkill = await this.userSkillsService.findOne(userId, skillId)
+        const search = Symbol()
+        this.pendingSearches.set(requestingClient, search)
+
+        let currentUserSkill: UserSkill | null
+        try {
+            currentUserSkill = await this.userSkillsService.findOne(userId, skillId)
+        } catch (error) {
+            if (this.pendingSearches.get(requestingClient) !== search) return null
+            this.pendingSearches.delete(requestingClient)
+            throw error
+        }
+
+        if (this.pendingSearches.get(requestingClient) !== search) return null
+        this.pendingSearches.delete(requestingClient)
         if (!currentUserSkill) {
             throw new BadRequestException()
         }
 
         // Check if client ready to connect and if Authorized
-        if (!this.isReadyToConnect(requestingClient)) return
+        if (!this.isReadyToConnect(requestingClient)) return null
 
         const partner = this.findPartner(currentUserSkill)
 
@@ -80,15 +99,23 @@ export class ChatService {
             this.matchClients(requestingClient, partner.client)
 
             return {
-                initiator: requestingClient,
-                receiver: partner.client
+                initiator: {
+                    socket: requestingClient,
+                    name: currentUserSkill.user.name
+                },
+                receiver: {
+                    socket: partner.client,
+                    name: partner.user.name
+                },
+                skillName: currentUserSkill.skill.name
             }
         } else {
-            await this.addToQueue(requestingClient, currentUserSkill)
+            this.addToQueue(requestingClient, currentUserSkill)
+            return null
         }
     }
 
-    private async addToQueue (client: WebSocket, userSkill: UserSkill) {
+    private addToQueue (client: WebSocket, userSkill: UserSkill) {
         const userData: UserData = {
             userId: userSkill.user.id,
             name: userSkill.user.name
@@ -117,9 +144,7 @@ export class ChatService {
             return false;
         }
 
-        if (!this.getClientFromAuthenticatedSocketUsers(client)) {
-            throw new UnauthorizedException();
-        }
+        this.getClientFromAuthenticatedSocketUsers(client);
 
         return true
     }
@@ -156,11 +181,6 @@ export class ChatService {
         if (waitingClient) {
             this.partners.set(client, waitingClient)
             this.partners.set(waitingClient, client)
-        }
-
-        return {
-            initiator: waitingClient,
-            receiver: client
         }
     }
 

@@ -19,11 +19,11 @@ export type ServerMessage =
     | {event: EventType.AUTHENTICATED}
     | {event: EventType.NEXT, data: {skillId: string}}
     | {event: EventType.AUTHENTICATE, data: {accessToken: string}}
-    | {event: EventType.END_CALL, data: {initiator: boolean}}
+    | {event: EventType.END_CALL, data: {initiator: boolean, cancelSearch?: boolean, acknowledged?: boolean}}
     | {event: EventType.FIND_PARTNER, data: {skillId: string}}
     | { event: EventType.CONNECTED; data: { message: string } }
     | { event: EventType.DISCONNECTED; data: { message: string } }
-    | { event: EventType.MATCHED; data: { initiator: boolean } }
+    | { event: EventType.MATCHED; data: {initiator: boolean, skillName: string, userName: string}}
     | { event: EventType.OFFER | EventType.ANSWER; data: { description: RTCSessionDescriptionInit } }
     | { event: EventType.ICE_CANDIDATE; data: { candidate: RTCIceCandidateInit } }
         // | { event: EventType.TEST_DISC}

@@ -7,7 +7,7 @@ import {
     WebSocketGateway,
 } from "@nestjs/websockets";
 import {ChatService} from "./chat.service";
-import {ErrorCode, EventType, EventType as Event} from "./types";
+import {ErrorCode, EventType, EventType as Event, PairedUsersResponse} from "./types";
 import {MatchedMessage} from "./messages/MaatchedMessage";
 import {ConnectionMessage} from "./messages/ConnectionMessage";
 import {IceCandidateMessage} from './messages/IceCandidateMessage';
@@ -17,7 +17,8 @@ import {AuthService} from "../auth/auth.service";
 import WebSocket from 'ws';
 import {ErrorMessage} from "./messages/ErrorMessage";
 import {AuthenticatedMessage} from "./messages/AuthenticatedMessage";
-import {BadRequestException, NotFoundException, UnauthorizedException} from "@nestjs/common";
+import {BadRequestException, UnauthorizedException} from "@nestjs/common";
+import {Message} from "./messages/message";
 
 @WebSocketGateway(4321)
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -27,11 +28,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         private authService: AuthService
     ) {}
 
-    private notifyUsers (match: {initiator: WebSocket, receiver: WebSocket}) {
-        match.initiator.send(JSON.stringify(new MatchedMessage(true)));
-        match.receiver.send(JSON.stringify(new MatchedMessage(false)));
-    }
-
     handleDisconnect(client: WebSocket, reason?: string) {
         const partner = this.userMatchingService.findPairedClient(client)
 
@@ -40,7 +36,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
 
         this.userMatchingService.removePair(client)
-        this.userMatchingService.removeFromQueue(client)
+        this.userMatchingService.cancelSearch(client)
         this.userMatchingService.removeFromAuthenticatedSocketUsers(client)
     }
 
@@ -101,7 +97,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     handleEndCall(client: WebSocket, data: any) {
         if (!this.requireAuthenticated(client)) return;
 
+        this.userMatchingService.cancelSearch(client);
         this.endCall(client, data.initiator);
+
+        if (data.cancelSearch && client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify(new EndCallMessage(true, true)));
+        }
     }
 
     private endCall(client: WebSocket, initiator: boolean) {
@@ -129,27 +130,24 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     handleIceCandidate(@ConnectedSocket() client: WebSocket, @MessageBody() data: any) {
         if (!this.requireAuthenticated(client)) return
 
-        const pairedClient = this.userMatchingService.findPairedClient(client)
-
-        if (pairedClient?.readyState !== WebSocket.OPEN) return
-
-        if (pairedClient) {
-            pairedClient.send(JSON.stringify(new IceCandidateMessage(data.candidate)));
-        }
+        const message = new IceCandidateMessage(data.candidate)
+        this.sendToPartner(message, client)
     }
 
     @SubscribeMessage(Event.ANSWER)
     handleAnswer(@ConnectedSocket() client: WebSocket, @MessageBody() data: any){
         if (!this.requireAuthenticated(client)) return
 
-        this.handleOfferAnswerEvent(Event.ANSWER, client, data)
+        const message = new OfferAnswerMessage(EventType.ANSWER, data.description)
+        this.sendToPartner(message, client)
     }
 
     @SubscribeMessage(Event.OFFER)
     handleOffer(@ConnectedSocket() client: WebSocket, @MessageBody() data: any){
         if (!this.requireAuthenticated(client)) return
 
-        this.handleOfferAnswerEvent(Event.OFFER, client, data)
+        const message = new OfferAnswerMessage(EventType.OFFER, data.description)
+        this.sendToPartner(message, client)
     }
 
     @SubscribeMessage(Event.FIND_PARTNER)
@@ -179,10 +177,24 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
     }
 
-    private handleOfferAnswerEvent (event: Event.OFFER | Event.ANSWER, @ConnectedSocket() client: WebSocket, @MessageBody() data: any) {
+    private notifyUsers (match: PairedUsersResponse) {
+        const receiverUser = match.receiver
+        const initiatorUser = match.initiator
+        const skillName = match.skillName
+
+        initiatorUser.socket.send(JSON.stringify(new MatchedMessage(true, receiverUser.name, skillName)));
+        receiverUser.socket.send(JSON.stringify(new MatchedMessage(false, initiatorUser.name, skillName)));
+    }
+
+    private sendToPartner (message: Message<any>, client: WebSocket) {
         const pairedClient = this.userMatchingService.findPairedClient(client)
+
+        if (pairedClient?.readyState !== WebSocket.OPEN) {
+            return;
+        }
+
         if (pairedClient) {
-            pairedClient.send(JSON.stringify(new OfferAnswerMessage(event, data.description)));
+            pairedClient.send(JSON.stringify(message));
         }
     }
 

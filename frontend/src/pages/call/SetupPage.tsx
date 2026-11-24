@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import styles from './SetupPage.module.css'
 import {ConversationSettings} from "../../features/chat/components/ConversationSettings.tsx";
 import {VideoPreview} from "../../features/chat/components/VideoPreview.tsx";
@@ -16,8 +15,6 @@ export type SetupPageProps = {
 
 export const SetupPage = ({media, conversation, setSkillId, skillId}: SetupPageProps) => {
 
-  const [localState, setLocalState] = useState('init')
-
   return (
     <main className={styles.main}>
       <section className={styles.card} aria-labelledby="conversation-heading">
@@ -29,14 +26,15 @@ export const SetupPage = ({media, conversation, setSkillId, skillId}: SetupPageP
             <span className={conversation.socketReady ? styles.statusDot : styles.statusDotDis} aria-hidden="true" />
             {conversation.socketReady ? "Ready to connect" : "NOT ready to connect"}
           </p>
-          <button onClick={() => {
-            conversation.findPartner(skillId)
-            setLocalState('searching')
-          }}
-                  className={styles.findButton}
-                  type="button"
-                  disabled={localState === 'searching' || !conversation.socketReady}
-          >{localState === 'searching' ? "Looking for partner" : "Find partner"}</button>
+          {conversation.connectionError && <p role="alert">{conversation.connectionError}</p>}
+          <button
+            onClick={() => conversation.findPartner(skillId)}
+            className={styles.findButton}
+            type="button"
+            disabled={!conversation.socketReady || !skillId || !media.stream}
+          >
+            Find partner
+          </button>
         </div>
 
         <div className={styles.preview}>
