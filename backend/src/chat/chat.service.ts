@@ -1,28 +1,31 @@
 import {BadRequestException, Injectable, NotFoundException, UnauthorizedException} from '@nestjs/common';
-import {AuthenticatedUser, ErrorCode, QueueObj} from "./types";
+import {AuthenticatedUser, ErrorCode, QueueObj, SkillData, UserData} from "./types";
 import {UserSkillsService} from "../user-skills/user-skills.service";
 import {UserSkill} from "../user-skills/user-skill.entity";
 import WebSocket from 'ws';
 import {ErrorMessage} from "./messages/ErrorMessage";
+import {UsersService} from "../users/users.service";
+import {SkillsService} from "../skills/skills.service";
+import {QueueEntry} from "./domain/QueueEntry";
+import {UserSkillRole} from "../user-skills/types";
 
 @Injectable()
 export class ChatService {
 
     private queue: QueueObj[]
     private partners: Map<WebSocket, WebSocket>
-    private socketUsers: Map<WebSocket, AuthenticatedUser>
+    private authenticatedSocketUsers: Map<WebSocket, AuthenticatedUser>
 
     constructor(
-        private userSkillsService: UserSkillsService
+        private userSkillsService: UserSkillsService,
     ) {
         this.queue = [];
         this.partners = new Map<WebSocket, WebSocket>()
-        this.socketUsers = new Map<WebSocket, AuthenticatedUser>()
-
+        this.authenticatedSocketUsers = new Map<WebSocket, AuthenticatedUser>()
     }
 
-    public getClientFromSocketUsers (client: WebSocket) {
-        const user = this.socketUsers.get(client)
+    public getClientFromAuthenticatedSocketUsers (client: WebSocket) {
+        const user = this.authenticatedSocketUsers.get(client)
 
         if (!user || user.exp * 1000 < Date.now()) {
             throw new UnauthorizedException()
@@ -31,8 +34,8 @@ export class ChatService {
         return user
     }
 
-    public addClientToSocketUsers (client: WebSocket, user: AuthenticatedUser) {
-        this.socketUsers.set(client, user)
+    public addClientToAuthenticatedSocketUsers (client: WebSocket, user: AuthenticatedUser) {
+        this.authenticatedSocketUsers.set(client, user)
     }
 
     public findPairedClient (client: WebSocket) {
@@ -43,8 +46,8 @@ export class ChatService {
         this.queue = this.queue.filter(socket => socket.client !== client);
     }
 
-    public removeFromSocketUsers (client: WebSocket) {
-        this.socketUsers.delete(client)
+    public removeFromAuthenticatedSocketUsers (client: WebSocket) {
+        this.authenticatedSocketUsers.delete(client)
     }
 
     public removePair (client: WebSocket) {
@@ -56,9 +59,8 @@ export class ChatService {
         }
     }
 
-    public async addClientToQueue (requestingClient: WebSocket, skillId: string, userId: string) {
-        const existing = this.queue.find((client) => client.client === requestingClient)
-        if (existing || this.partners.has(requestingClient)) {
+    public async findPartnerOrQueueClient (requestingClient: WebSocket, skillId: string, userId: string) {
+        if (this.isInQueue(requestingClient) || this.isPartner(requestingClient)) {
             this.removeFromQueue(requestingClient)
             this.partners.delete(requestingClient)
         }
@@ -68,14 +70,8 @@ export class ChatService {
             throw new BadRequestException()
         }
 
-
-        if (requestingClient.readyState !== WebSocket.OPEN) {
-            return;
-        }
-
-        if (!this.getClientFromSocketUsers(requestingClient)) {
-            throw new UnauthorizedException();
-        }
+        // Check if client ready to connect and if Authorized
+        if (!this.isReadyToConnect(requestingClient)) return
 
         const partner = this.findPartner(currentUserSkill)
 
@@ -88,20 +84,51 @@ export class ChatService {
                 receiver: partner.client
             }
         } else {
-            this.queue.push({
-                client: requestingClient,
-                userId: userId,
-                skillId: skillId,
-                role: currentUserSkill.role
-            })
+            await this.addToQueue(requestingClient, currentUserSkill)
         }
     }
 
-    private findPartner (requestingUser: UserSkill): QueueObj | null {
+    private async addToQueue (client: WebSocket, userSkill: UserSkill) {
+        const userData: UserData = {
+            userId: userSkill.user.id,
+            name: userSkill.user.name
+        }
+
+        const skillData: SkillData = {
+            skillId: userSkill.skill.id,
+            name: userSkill.skill.name,
+        }
+
+        const queueEntry = new QueueEntry(client, userData, skillData, userSkill.role)
+        this.queue.push(queueEntry)
+    }
+
+    private isInQueue (client: WebSocket) {
+        return this.queue.find((entry) => entry.client === client);
+    }
+
+    private isPartner (client: WebSocket) {
+        return this.partners.has(client)
+    }
+
+
+    private isReadyToConnect (client: WebSocket): boolean {
+        if (client.readyState !== WebSocket.OPEN) {
+            return false;
+        }
+
+        if (!this.getClientFromAuthenticatedSocketUsers(client)) {
+            throw new UnauthorizedException();
+        }
+
+        return true
+    }
+
+    private findPartner (userSkill: UserSkill): QueueObj | null {
 
         for (const entry of this.queue) {
             try {
-                this.getClientFromSocketUsers(entry.client)
+                this.getClientFromAuthenticatedSocketUsers(entry.client)
             } catch (error) {
                 if (error instanceof UnauthorizedException) {
                     this.removeFromQueue(entry.client);
@@ -114,8 +141,8 @@ export class ChatService {
             }
 
             if (
-                entry.skillId === requestingUser.skillId &&
-                entry.role !== requestingUser.role &&
+                entry.skill.skillId === userSkill.skillId &&
+                entry.role !== userSkill.role &&
                 entry.client.readyState === WebSocket.OPEN
             ) {
                 return entry;

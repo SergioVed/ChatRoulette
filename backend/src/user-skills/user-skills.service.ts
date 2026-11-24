@@ -69,7 +69,7 @@ export class UserSkillsService {
 
   async findOne(userId: string, skillId: string): Promise<UserSkill | null> {
     const assignment = await this.assignments.findOne({
-      where: { userId, skillId }, relations: { skill: true },
+      where: { userId, skillId }, relations: { skill: true, user: true },
     });
 
     if (!assignment){
