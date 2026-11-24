@@ -2,7 +2,8 @@ import { API_BASE_URL } from '../../../shared/api/http.ts'
 
 export interface AuthMeResponse {
   id: string
-  completedOnboarding: boolean
+  onBoardingCompleted: boolean,
+  name: string
 }
 
 export async function authMe(token: string): Promise<AuthMeResponse> {
@@ -19,9 +20,13 @@ export async function authMe(token: string): Promise<AuthMeResponse> {
   if (!response.ok) throw new Error(`Failed to load your account: ${response.status}`)
 
   const data = await response.json().catch(() => null)
-  if (typeof data?.id !== 'string' || typeof data?.onBoardingCompleted !== 'boolean') {
+  if (typeof data?.userId !== 'string' || typeof data?.onBoardingCompleted !== 'boolean') {
     throw new Error('Unexpected response from the server. Please try again.')
   }
 
-  return { id: data.id, completedOnboarding: data.onBoardingCompleted }
+  return {
+    id: data.userId,
+    onBoardingCompleted: data.onBoardingCompleted,
+    name: data.name
+  }
 }
