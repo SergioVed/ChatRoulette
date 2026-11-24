@@ -22,8 +22,6 @@ import {BadRequestException, NotFoundException, UnauthorizedException} from "@ne
 @WebSocketGateway(4321)
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
-    private ignoreClients:Set<WebSocket> = new Set()
-
     constructor(
         private userMatchingService: ChatService,
         private authService: AuthService
@@ -43,7 +41,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         this.userMatchingService.removePair(client)
         this.userMatchingService.removeFromQueue(client)
-        this.userMatchingService.removeFromSocketUsers(client)
+        this.userMatchingService.removeFromAuthenticatedSocketUsers(client)
     }
 
     handleConnection(client: WebSocket, ...args: any[]) {
@@ -55,12 +53,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         let isAlive = true;
 
         client.on('pong', () => {
-            if (this.ignoreClients.has(client)) {
-                return
-            }
-
             isAlive = true;
-            // console.log('pong')
         })
 
         const timeout = setInterval(() => {
@@ -77,11 +70,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         client.on('close', () => clearInterval(timeout));
     }
-    //
-    // @SubscribeMessage("test_disc")
-    // async handleTest (@ConnectedSocket() client: WebSocket) {
-    //     this.ignoreClients.add(client)
-    // }
 
     @SubscribeMessage(Event.AUTHENTICATE)
     async handleAuthenticate (@ConnectedSocket() client: WebSocket, @MessageBody() data: any) {
@@ -98,7 +86,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 return
             }
 
-            this.userMatchingService.addClientToSocketUsers(
+            this.userMatchingService.addClientToAuthenticatedSocketUsers(
                 client,
                 authenticatedUser
             );
@@ -176,7 +164,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.userMatchingService.removePair(client)
 
         try {
-            const match = await this.userMatchingService.addClientToQueue(client, data.skillId, authenticatedUser.userId)
+            const match = await this.userMatchingService.findPartnerOrQueueClient(client, data.skillId, authenticatedUser.userId)
             if (match) {
                 this.notifyUsers(match)
             }
@@ -200,7 +188,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     private requireAuthenticated (client: WebSocket) {
         try {
-            return this.userMatchingService.getClientFromSocketUsers(client);
+            return this.userMatchingService.getClientFromAuthenticatedSocketUsers(client);
         } catch (error) {
             if (client.readyState === WebSocket.OPEN) {
                 client.send(JSON.stringify(new ErrorMessage(ErrorCode.AUTH_REQUIRED)));
