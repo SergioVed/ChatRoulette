@@ -20,6 +20,7 @@ export function useConversation (localStream: MediaStream | null) {
 
     const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null)
     const [connectionState, setConnectionState] = useState<RTCPeerConnectionState>('new')
+    const [socketReady, setSocketReady] = useState<boolean>(false)
     const [connectionError, setConnectionError] = useState<string>('')
     const [authenticated, setAuthenticated] = useState<boolean>(false)
 
@@ -148,6 +149,7 @@ export function useConversation (localStream: MediaStream | null) {
                     event: EventType.AUTHENTICATE,
                     data: {accessToken: token}
                 })
+                setSocketReady(true)
 
                 break;
             }
@@ -301,5 +303,5 @@ export function useConversation (localStream: MediaStream | null) {
     // }
 
 
-    return {remoteStream, connectionState, connectionError, findPartner, endCall, next}
+    return {remoteStream, connectionState, connectionError, findPartner, endCall, next, socketReady}
 }
