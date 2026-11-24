@@ -46,3 +46,15 @@ export interface AuthenticatedUser {
     userId: string,
     exp: number
 }
+
+export interface PairedUsersResponse {
+    initiator: {
+        name: string,
+        socket: WebSocket
+    },
+    receiver: {
+        name: string,
+        socket: WebSocket
+    },
+    skillName: string
+}

@@ -1,10 +1,19 @@
 import {Message} from "./message";
 import {EventType} from "../types";
 
-export class MatchedMessage extends Message<{initiator: boolean}>{
+interface MatchedMessageProps {
+    initiator: boolean,
+    userName: string,
+    skillName: string
+}
 
-    constructor(value: boolean) {
-        super(EventType.MATCHED, {initiator: value})
+export class MatchedMessage extends Message<MatchedMessageProps>{
+
+    constructor(value: boolean, userName: string, skillName: string) {
+        super(EventType.MATCHED, {
+            initiator: value,
+            userName: userName,
+            skillName: skillName
+        })
     }
-
 }

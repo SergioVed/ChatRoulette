@@ -7,7 +7,7 @@ import {
     WebSocketGateway,
 } from "@nestjs/websockets";
 import {ChatService} from "./chat.service";
-import {ErrorCode, EventType, EventType as Event} from "./types";
+import {ErrorCode, EventType, EventType as Event, PairedUsersResponse} from "./types";
 import {MatchedMessage} from "./messages/MaatchedMessage";
 import {ConnectionMessage} from "./messages/ConnectionMessage";
 import {IceCandidateMessage} from './messages/IceCandidateMessage';
@@ -27,11 +27,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         private userMatchingService: ChatService,
         private authService: AuthService
     ) {}
-
-    private notifyUsers (match: {initiator: WebSocket, receiver: WebSocket}) {
-        match.initiator.send(JSON.stringify(new MatchedMessage(true)));
-        match.receiver.send(JSON.stringify(new MatchedMessage(false)));
-    }
 
     handleDisconnect(client: WebSocket, reason?: string) {
         const partner = this.userMatchingService.findPairedClient(client)
@@ -146,7 +141,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     handleOffer(@ConnectedSocket() client: WebSocket, @MessageBody() data: any){
         if (!this.requireAuthenticated(client)) return
 
-        const message = new OfferAnswerMessage(EventType.ANSWER, data.description)
+        const message = new OfferAnswerMessage(EventType.OFFER, data.description)
         this.sendToPartner(message, client)
     }
 
@@ -175,6 +170,15 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 client.send(JSON.stringify(new ErrorMessage(ErrorCode.INTERNAL_ERROR)))
             }
         }
+    }
+
+    private notifyUsers (match: PairedUsersResponse) {
+        const receiverUser = match.receiver
+        const initiatorUser = match.initiator
+        const skillName = match.skillName
+
+        initiatorUser.socket.send(JSON.stringify(new MatchedMessage(true, receiverUser.name, skillName)));
+        receiverUser.socket.send(JSON.stringify(new MatchedMessage(false, initiatorUser.name, skillName)));
     }
 
     private sendToPartner (message: Message<any>, client: WebSocket) {

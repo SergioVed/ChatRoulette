@@ -1,5 +1,5 @@
 import {BadRequestException, Injectable, NotFoundException, UnauthorizedException} from '@nestjs/common';
-import {AuthenticatedUser, ErrorCode, QueueObj, SkillData, UserData} from "./types";
+import {AuthenticatedUser, ErrorCode, PairedUsersResponse, QueueObj, SkillData, UserData} from "./types";
 import {UserSkillsService} from "../user-skills/user-skills.service";
 import {UserSkill} from "../user-skills/user-skill.entity";
 import WebSocket from 'ws';
@@ -59,7 +59,7 @@ export class ChatService {
         }
     }
 
-    public async findPartnerOrQueueClient (requestingClient: WebSocket, skillId: string, userId: string) {
+    public async findPartnerOrQueueClient (requestingClient: WebSocket, skillId: string, userId: string): Promise<PairedUsersResponse | null> {
         if (this.isInQueue(requestingClient) || this.isPartner(requestingClient)) {
             this.removeFromQueue(requestingClient)
             this.removePair(requestingClient)
@@ -71,7 +71,7 @@ export class ChatService {
         }
 
         // Check if client ready to connect and if Authorized
-        if (!this.isReadyToConnect(requestingClient)) return
+        if (!this.isReadyToConnect(requestingClient)) return null
 
         const partner = this.findPartner(currentUserSkill)
 
@@ -80,11 +80,19 @@ export class ChatService {
             this.matchClients(requestingClient, partner.client)
 
             return {
-                initiator: requestingClient,
-                receiver: partner.client
+                initiator: {
+                    socket: requestingClient,
+                    name: currentUserSkill.user.name
+                },
+                receiver: {
+                    socket: partner.client,
+                    name: partner.user.name
+                },
+                skillName: currentUserSkill.skill.name
             }
         } else {
             this.addToQueue(requestingClient, currentUserSkill)
+            return null
         }
     }
 
