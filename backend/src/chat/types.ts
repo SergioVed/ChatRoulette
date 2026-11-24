@@ -27,9 +27,19 @@ export enum ErrorCode {
 
 export interface QueueObj {
     client: WebSocket,
-    userId: string,
+    userId: string
     skillId: string,
     role: UserSkillRole
+}
+
+export interface UserData {
+    userId: string,
+    name: string
+}
+
+export interface SkillData {
+    skillId: string,
+    name: string
 }
 
 export interface AuthenticatedUser {
