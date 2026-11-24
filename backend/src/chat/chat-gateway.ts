@@ -17,7 +17,8 @@ import {AuthService} from "../auth/auth.service";
 import WebSocket from 'ws';
 import {ErrorMessage} from "./messages/ErrorMessage";
 import {AuthenticatedMessage} from "./messages/AuthenticatedMessage";
-import {BadRequestException, NotFoundException, UnauthorizedException} from "@nestjs/common";
+import {BadRequestException, UnauthorizedException} from "@nestjs/common";
+import {Message} from "./messages/message";
 
 @WebSocketGateway(4321)
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -129,27 +130,24 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     handleIceCandidate(@ConnectedSocket() client: WebSocket, @MessageBody() data: any) {
         if (!this.requireAuthenticated(client)) return
 
-        const pairedClient = this.userMatchingService.findPairedClient(client)
-
-        if (pairedClient?.readyState !== WebSocket.OPEN) return
-
-        if (pairedClient) {
-            pairedClient.send(JSON.stringify(new IceCandidateMessage(data.candidate)));
-        }
+        const message = new IceCandidateMessage(data.candidate)
+        this.sendToPartner(message, client)
     }
 
     @SubscribeMessage(Event.ANSWER)
     handleAnswer(@ConnectedSocket() client: WebSocket, @MessageBody() data: any){
         if (!this.requireAuthenticated(client)) return
 
-        this.handleOfferAnswerEvent(Event.ANSWER, client, data)
+        const message = new OfferAnswerMessage(EventType.ANSWER, data.description)
+        this.sendToPartner(message, client)
     }
 
     @SubscribeMessage(Event.OFFER)
     handleOffer(@ConnectedSocket() client: WebSocket, @MessageBody() data: any){
         if (!this.requireAuthenticated(client)) return
 
-        this.handleOfferAnswerEvent(Event.OFFER, client, data)
+        const message = new OfferAnswerMessage(EventType.ANSWER, data.description)
+        this.sendToPartner(message, client)
     }
 
     @SubscribeMessage(Event.FIND_PARTNER)
@@ -179,10 +177,15 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
     }
 
-    private handleOfferAnswerEvent (event: Event.OFFER | Event.ANSWER, @ConnectedSocket() client: WebSocket, @MessageBody() data: any) {
+    private sendToPartner (message: Message<any>, client: WebSocket) {
         const pairedClient = this.userMatchingService.findPairedClient(client)
+
+        if (pairedClient?.readyState !== WebSocket.OPEN) {
+            return;
+        }
+
         if (pairedClient) {
-            pairedClient.send(JSON.stringify(new OfferAnswerMessage(event, data.description)));
+            pairedClient.send(JSON.stringify(message));
         }
     }
 
