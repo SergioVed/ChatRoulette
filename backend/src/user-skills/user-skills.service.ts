@@ -65,17 +65,6 @@ export class UserSkillsService {
     return this.assignments.find({
       where: { userId },
       relations: { skill: true },
-      select: {
-        userId: true,
-        skillId: true,
-        role: true,
-        user: {
-          name: true
-        },
-        skill: {
-          name: true
-        }
-      }
     });
   }
 

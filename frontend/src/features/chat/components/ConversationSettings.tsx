@@ -24,6 +24,8 @@ export const ConversationSettings = ({setSkillId, skillId}: ConversationSettings
         setSkillId(skills[0]?.skillId ?? '')
     }, [skills, skillId, setSkillId])
 
+    console.log(skills)
+
     return (
         <div className={styles.skillField}>
             <label htmlFor="skill">Skill</label>
