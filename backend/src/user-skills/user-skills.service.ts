@@ -63,7 +63,19 @@ export class UserSkillsService {
 
   findAll(userId: string): Promise<UserSkill[]> {
     return this.assignments.find({
-      where: { userId }, relations: { skill: true }
+      where: { userId },
+      relations: { skill: true },
+      select: {
+        userId: true,
+        skillId: true,
+        role: true,
+        user: {
+          name: true
+        },
+        skill: {
+          name: true
+        }
+      }
     });
   }
 
