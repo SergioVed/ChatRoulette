@@ -28,8 +28,7 @@ export function useMediaRecord () {
         currentRecorder.start();
     }
 
-    function stopRecording () {
-        console.log("recording sent")
+    function stopRecording (skillId: string) {
         const currentRecorder = recorder.current;
         if (currentRecorder == null) {
             return;
@@ -42,7 +41,7 @@ export function useMediaRecord () {
                 type: currentRecorder.mimeType
             })
 
-            void sendRecording(audioBlob, token)
+            void sendRecording(skillId, audioBlob, token)
         }
     }
 

@@ -6,12 +6,14 @@ export const apiRequest = async (endpoint: string, options: RequestInit = {}) =>
     let response: Response;
 
     try {
+        const headers = new Headers(options.headers)
+        if (typeof options.body === 'string' && !headers.has('Content-Type')) {
+            headers.set('Content-Type', 'application/json')
+        }
+
         response = await fetch(`${API_BASE_URL}/${endpoint}`, {
             ...options,
-            headers: {
-                'Content-Type': 'application/json',
-                ...options.headers,
-            },
+            headers,
         })
     } catch (error) {
         throw new Error('Unable to connect')
