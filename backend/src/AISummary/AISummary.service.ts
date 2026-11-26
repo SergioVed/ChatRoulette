@@ -1,14 +1,12 @@
 import OpenAI from "openai";
-import {BadGatewayException, BadRequestException, HttpException, Injectable, NotFoundException} from "@nestjs/common";
-import {Express, response} from "express";
+import { BadGatewayException, BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import type { Express } from 'express';
 import Groq, {toFile} from "groq-sdk";
-import * as fs from "node:fs";
 import {instructions} from "./utils/instructions";
 import {Summary} from "./summary.entity";
-import {SkillsService} from "../skills/skills.service";
+import { CallService } from '../calls/call.service';
 import {InjectRepository} from "@nestjs/typeorm";
-import {async} from "rxjs";
-import {Repository} from "typeorm";
+import { QueryFailedError, Repository } from 'typeorm';
 
 
 @Injectable()
@@ -16,7 +14,7 @@ export class AISummaryService {
 
     constructor(
         @InjectRepository(Summary) readonly repository: Repository<Summary>,
-        private skillsService: SkillsService
+        private readonly calls: CallService,
     ) {}
 
     private readonly client = new OpenAI({
@@ -58,18 +56,25 @@ export class AISummaryService {
         }
     }
 
-    async save (text: string, skillId: string, userId: string) {
-        const skill = await this.skillsService.findOne(skillId)
-        if (!skill) {
-            throw new NotFoundException('Skill does not exist')
+    async requireParticipant(callId: string, userId: string): Promise<void> {
+        const call = await this.calls.findCallById(callId);
+        if (!call || (call.userOneId !== userId && call.userTwoId !== userId)) {
+            throw new NotFoundException('Call not found');
         }
+    }
 
-        const summary = this.repository.create({
-            text,
-            skillId,
-            userId
-        })
-
-        return await this.repository.save(summary)
+    async save(text: string, callId: string): Promise<Summary> {
+        const summary = this.repository.create({ text, callId });
+        try {
+            return await this.repository.save(summary);
+        } catch (error) {
+            if (error instanceof QueryFailedError) {
+                const { code } = error.driverError
+                if (code === '23505') {
+                    throw new ConflictException('Call already has a summary');
+                }
+            }
+            throw error;
+        }
     }
 }

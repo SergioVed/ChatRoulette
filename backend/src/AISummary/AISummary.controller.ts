@@ -18,9 +18,10 @@ export class AISummaryController {
         @Body() dto: CreateSummaryDto,
         @Req() req: AuthenticatedRequest
     ) {
+        await this.service.requireParticipant(dto.callId, req.user.id);
         const transcription = await this.service.generateTranscription(file)
         const text = await this.service.summarize(transcription)
-        return await this.service.save(text, dto.skillId, req.user.id)
+        return this.service.save(text, dto.callId);
     }
 
 }

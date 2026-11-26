@@ -1,4 +1,6 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, JoinColumn, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
+import type { Relation } from 'typeorm';
+import { Call } from '../calls/call.entity';
 
 @Entity('summaries')
 export class Summary {
@@ -9,8 +11,9 @@ export class Summary {
     text!: string;
 
     @Column({ type: 'uuid' })
-    skillId!: string;
+    callId!: string;
 
-    @Column({ type: 'uuid' })
-    userId!: string;
+    @OneToOne(() => Call, { nullable: false })
+    @JoinColumn({ name: 'callId' })
+    call!: Relation<Call>;
 }
