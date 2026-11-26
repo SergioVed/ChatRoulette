@@ -48,6 +48,7 @@ export interface AuthenticatedUser {
 }
 
 export interface PairedUsersResponse {
+    callId: string,
     initiator: {
         name: string,
         socket: WebSocket

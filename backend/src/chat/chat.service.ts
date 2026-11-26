@@ -8,17 +8,18 @@ import {UsersService} from "../users/users.service";
 import {SkillsService} from "../skills/skills.service";
 import {QueueEntry} from "./domain/QueueEntry";
 import {UserSkillRole} from "../user-skills/types";
+import { CallService } from '../calls/call.service';
 
 @Injectable()
 export class ChatService {
 
     private queue: QueueObj[]
-    private readonly pendingSearches = new Map<WebSocket, symbol>()
     private partners: Map<WebSocket, WebSocket>
     private authenticatedSocketUsers: Map<WebSocket, AuthenticatedUser>
 
     constructor(
         private userSkillsService: UserSkillsService,
+        private readonly calls: CallService,
     ) {
         this.queue = [];
         this.partners = new Map<WebSocket, WebSocket>()
@@ -48,7 +49,6 @@ export class ChatService {
     }
 
     public cancelSearch (client: WebSocket) {
-        this.pendingSearches.delete(client)
         this.removeFromQueue(client)
     }
 
@@ -71,20 +71,7 @@ export class ChatService {
             this.removePair(requestingClient)
         }
 
-        const search = Symbol()
-        this.pendingSearches.set(requestingClient, search)
-
-        let currentUserSkill: UserSkill | null
-        try {
-            currentUserSkill = await this.userSkillsService.findOne(userId, skillId)
-        } catch (error) {
-            if (this.pendingSearches.get(requestingClient) !== search) return null
-            this.pendingSearches.delete(requestingClient)
-            throw error
-        }
-
-        if (this.pendingSearches.get(requestingClient) !== search) return null
-        this.pendingSearches.delete(requestingClient)
+        const currentUserSkill = await this.userSkillsService.findOne(userId, skillId)
         if (!currentUserSkill) {
             throw new BadRequestException()
         }
@@ -97,8 +84,12 @@ export class ChatService {
         if (partner != null) {
             this.removeFromQueue(partner.client)
             this.matchClients(requestingClient, partner.client)
+            const call = await this.calls.createCall(
+                currentUserSkill.user.id, partner.user.userId, currentUserSkill.skill.id, new Date(),
+            );
 
             return {
+                callId: call.id,
                 initiator: {
                     socket: requestingClient,
                     name: currentUserSkill.user.name

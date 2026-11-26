@@ -1,6 +1,6 @@
-import {sendRecording} from "../api/sendRecording.ts";
 import {useRef} from "react";
 import {useUserContext} from "../../shared/hooks/useUserContext.ts";
+import {sendRecording} from "../api/sendRecording.ts";
 
 
 export function useMediaRecord () {
@@ -28,22 +28,28 @@ export function useMediaRecord () {
         currentRecorder.start();
     }
 
-    function stopRecording (skillId: string) {
+    function stopRecording (callId: string, shouldUpload: boolean) {
         const currentRecorder = recorder.current;
-        if (currentRecorder == null) {
+        if (currentRecorder == null || currentRecorder.state === "inactive") {
             return;
         }
 
-        currentRecorder.stop()
-
         currentRecorder.onstop = () => {
-            const audioBlob = new Blob(chunks.current, {
-                type: currentRecorder.mimeType
-            })
+            const recordedChunks = chunks.current
+            chunks.current = []
 
-            void sendRecording(skillId, audioBlob, token)
+            if (shouldUpload && token) {
+                const audioBlob = new Blob(recordedChunks, {
+                    type: currentRecorder.mimeType
+                })
+                void sendRecording(callId, audioBlob, token)
+            }
         }
+
+        currentRecorder.stop()
     }
+
+
 
     return {createMediaRecoder, startRecording, stopRecording}
 }

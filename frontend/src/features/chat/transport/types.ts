@@ -23,7 +23,7 @@ export type ServerMessage =
     | {event: EventType.FIND_PARTNER, data: {skillId: string}}
     | { event: EventType.CONNECTED; data: { message: string } }
     | { event: EventType.DISCONNECTED; data: { message: string } }
-    | { event: EventType.MATCHED; data: {initiator: boolean, skillName: string, userName: string}}
+    | { event: EventType.MATCHED; data: {initiator: boolean, skillName: string, userName: string, callId: string}}
     | { event: EventType.OFFER | EventType.ANSWER; data: { description: RTCSessionDescriptionInit } }
     | { event: EventType.ICE_CANDIDATE; data: { candidate: RTCIceCandidateInit } }
         // | { event: EventType.TEST_DISC}

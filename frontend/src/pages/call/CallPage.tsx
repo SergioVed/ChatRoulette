@@ -61,7 +61,7 @@ export const CallPage = ({media, conversation, skillId}: CallPageProps) => {
             <CameraButton enabled={media.displaying} onClick={media.toggleVideo} />
           </div>
           <EndCallButton
-            onClick={() => conversation.endCall(skillId)}
+            onClick={conversation.endCall}
             label={searching ? 'Cancel search' : 'End call'}
           />
           {!searching && <NextTeacherButton onClick={() => conversation.next(skillId)} />}

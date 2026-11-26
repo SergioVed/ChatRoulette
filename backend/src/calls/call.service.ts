@@ -16,6 +16,10 @@ export class CallService {
         return this.calls.findOne({ where: { id } });
     }
 
+    findCallForParticipant(id: string, userId: string): Promise<Call | null> {
+        return this.calls.findOne({ where: [{ id, userOneId: userId }, { id, userTwoId: userId }] });
+    }
+
     async endCall(id: string): Promise<Call | null> {
         await this.calls.update({ id, endedAt: IsNull() }, { endedAt: new Date() });
         return this.findCallById(id);
