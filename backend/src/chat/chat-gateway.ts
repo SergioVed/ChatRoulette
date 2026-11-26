@@ -182,8 +182,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const initiatorUser = match.initiator
         const skillName = match.skillName
 
-        initiatorUser.socket.send(JSON.stringify(new MatchedMessage(true, receiverUser.name, skillName)));
-        receiverUser.socket.send(JSON.stringify(new MatchedMessage(false, initiatorUser.name, skillName)));
+        initiatorUser.socket.send(JSON.stringify(new MatchedMessage(true, receiverUser.name, skillName, match.callId)));
+        receiverUser.socket.send(JSON.stringify(new MatchedMessage(false, initiatorUser.name, skillName, match.callId)));
     }
 
     private sendToPartner (message: Message<any>, client: WebSocket) {

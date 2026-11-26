@@ -1,8 +1,9 @@
-import {Body, Controller, Get, Post, UploadedFile, UseGuards, UseInterceptors} from '@nestjs/common';
+import {Body, Controller, Get, Post, Req, UploadedFile, UseGuards, UseInterceptors} from '@nestjs/common';
 import {AISummaryService} from "./AISummary.service";
 import {FileInterceptor} from "@nestjs/platform-express";
 import type {Express} from "express";
-import {JwtAuthGuard} from "../auth/jwt-auth.guard";
+import {AuthenticatedRequest, JwtAuthGuard} from "../auth/jwt-auth.guard";
+import {CreateSummaryDto} from "./dto/create-summary.dto";
 
 @Controller('AISummary')
 export class AISummaryController {
@@ -12,9 +13,15 @@ export class AISummaryController {
     @UseGuards(JwtAuthGuard)
     @Post()
     @UseInterceptors(FileInterceptor('audio'))
-    public async summarize (@UploadedFile() file: Express.Multer.File) {
+    public async summarize (
+        @UploadedFile() file: Express.Multer.File,
+        @Body() dto: CreateSummaryDto,
+        @Req() req: AuthenticatedRequest
+    ) {
+        await this.service.requireParticipant(dto.callId, req.user.id);
         const transcription = await this.service.generateTranscription(file)
-        return await this.service.summarize(transcription)
+        const text = await this.service.summarize(transcription)
+        return this.service.save(text, dto.callId);
     }
 
 }

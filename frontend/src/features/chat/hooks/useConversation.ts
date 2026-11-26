@@ -6,15 +6,15 @@ import {useUserContext} from "../../shared/hooks/useUserContext.ts";
 import {usePeerConnection} from "./usePeerConnection.ts";
 import {ConversationState, type Partner} from "../types.ts";
 import {useLogout} from "../../auth/hooks/useLogout.tsx";
-// import {useMediaRecord} from "../../recording/hooks/useMediaRecord.ts";
-// import {getCombinedStreams} from "../../recording/utils/createMixedAudioStream.ts";
+import {useMediaRecord} from "../../recording/hooks/useMediaRecord.ts";
+import {getCombinedStreams} from "../../recording/utils/createMixedAudioStream.ts";
 
 
 export function useConversation (localStream: MediaStream | null) {
 
     const {token} = useUserContext()
     const {logout} = useLogout()
-    // const {startRecording, createMediaRecoder, stopRecording} = useMediaRecord()
+    const {startRecording, createMediaRecoder, stopRecording} = useMediaRecord()
 
     const {
         remoteStream,
@@ -38,23 +38,49 @@ export function useConversation (localStream: MediaStream | null) {
     })
     const socket = useRef<ConversationSocket | null>(null)
     const localStreamRef = useRef<MediaStream | null>(localStream)
+    const callIdRef = useRef<string | null>(null)
+    const isInitiatorRef = useRef<boolean>(false)
 
     const [socketReady, setSocketReady] = useState<boolean>(false)
     const [conversationState, setConversationState] = useState<ConversationState>(ConversationState.IDLE)
-
     const [connectionError, setConnectionError] = useState<string>('')
+
     const [authenticated, setAuthenticated] = useState<boolean>(false)
     const [partner, setPartner] = useState<Partner | null>(null)
 
-    // useEffect(() => {
-    //     if (connectionState === 'connected' && localStream !== null && remoteStream !== null) {
-    //         const stream = getCombinedStreams(localStream, remoteStream)
-    //         createMediaRecoder(stream)
-    //
-    //         startRecording()
-    //     }
-    //
-    // }, [connectionState, remoteStream, localStream])
+    function finishCall (replace = false) {
+        const callId = callIdRef.current
+        if (callId !== null) {
+            stopRecording(callId, isInitiatorRef.current)
+        }
+
+        if (replace) {
+            replacePeerConnection()
+        } else {
+            cleanUpCall()
+        }
+        callIdRef.current = null
+        isInitiatorRef.current = false
+    }
+
+
+
+
+
+
+
+
+
+
+    useEffect(() => {
+        if (connectionState === 'connected' && localStream !== null && remoteStream !== null) {
+            const stream = getCombinedStreams(localStream, remoteStream)
+            createMediaRecoder(stream)
+
+            startRecording()
+        }
+
+    }, [connectionState, remoteStream, localStream])
 
     useEffect(() => {
         localStreamRef.current = localStream
@@ -62,9 +88,10 @@ export function useConversation (localStream: MediaStream | null) {
 
 
     useEffect(() => {
-        socket.current = new ConversationSocket(WS_BASE_URL)
+        const transport = new ConversationSocket(WS_BASE_URL)
+        socket.current = transport
 
-        socket.current.onMessage(async (message) => {
+        transport.onMessage(async (message) => {
             try {
                 await handleMessages(message)
             } catch (error) {
@@ -72,16 +99,40 @@ export function useConversation (localStream: MediaStream | null) {
             }
         })
 
+        transport.onClose(() => {
+            finishCall()
+            setAuthenticated(false)
+            setSocketReady(false)
+            setPartner(null)
+            setConversationState(ConversationState.IDLE)
+        })
+
         return () => {
-            socket.current.close();
+            transport.close()
+            socket.current = null
+            callIdRef.current = null
+            isInitiatorRef.current = false
             setPartner(null)
         }
     }, [])
 
 
+
+
+
+
+
+
+
+
+
+
     async function handleMessages (message: ServerMessage) {
         switch (message.event) {
             case EventType.MATCHED: {
+                const {callId, initiator} = message.data
+                callIdRef.current = callId
+                isInitiatorRef.current = initiator
                 setConversationState(ConversationState.MATCHED)
 
                 const transport = socket.current
@@ -92,6 +143,7 @@ export function useConversation (localStream: MediaStream | null) {
                 }
 
                 await peer.addLocalStream(stream)
+                if (callIdRef.current !== callId) break
 
                 const partner:Partner = {
                     name: message.data.userName,
@@ -99,8 +151,9 @@ export function useConversation (localStream: MediaStream | null) {
                 }
                 setPartner(partner)
 
-                if (message.data.initiator) {
+                if (initiator) {
                     const description = await peer.createOffer()
+                    if (callIdRef.current !== callId) break
 
                     transport.sendMessage({
                         event: EventType.OFFER,
@@ -112,8 +165,7 @@ export function useConversation (localStream: MediaStream | null) {
 
             case EventType.END_CALL: {
                 setConversationState(ConversationState.IDLE)
-
-                replacePeerConnection()
+                finishCall(true)
                 break;
             }
 
@@ -187,8 +239,6 @@ export function useConversation (localStream: MediaStream | null) {
         }
     }
 
-
-
     function handleError (code: ErrorCode) {
         switch (code) {
             case ErrorCode.AUTH_REQUIRED: {
@@ -226,7 +276,8 @@ export function useConversation (localStream: MediaStream | null) {
             throw new Error('Transport is null')
         }
 
-        replacePeerConnection()
+
+        finishCall(true)
 
         transport.sendMessage({
             event: EventType.FIND_PARTNER,
@@ -237,8 +288,7 @@ export function useConversation (localStream: MediaStream | null) {
 
     async function endCall () {
         setConversationState(ConversationState.IDLE)
-        // stopRecording()
-        cleanUpCall()
+        finishCall()
 
         const transport = socket.current
         if (!transport) {
@@ -259,8 +309,7 @@ export function useConversation (localStream: MediaStream | null) {
             throw new Error('Transport is null')
         }
 
-        // stopRecording()
-        replacePeerConnection()
+        finishCall(true)
 
         transport.sendMessage({
             event: EventType.NEXT,

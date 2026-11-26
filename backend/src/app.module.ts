@@ -7,6 +7,7 @@ import { ChatModule } from './chat/chat.module';
 import { SkillsModule } from './skills/skills.module';
 import { UserSkillsModule } from './user-skills/user-skills.module';
 import { AISummaryModule } from './AISummary/AISummary.module';
+import { CallModule } from './calls/call.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { AISummaryModule } from './AISummary/AISummary.module';
 
     UserSkillsModule,
     SkillsModule,
+    CallModule,
     AISummaryModule,
   ],
 })
