@@ -156,16 +156,17 @@ export class ChatService {
                 throw error;
             }
 
-            if (
-                entry.skill.skillId === userSkill.skillId &&
-                entry.role !== userSkill.role &&
-                entry.client.readyState === WebSocket.OPEN
-            ) {
+            if (this.canMatch(entry, userSkill) && entry.client.readyState === WebSocket.OPEN) {
                 return entry;
             }
         }
 
         return null
+    }
+
+    private canMatch (entry: QueueObj, userSkill: UserSkill) {
+        return entry.skill.skillId === userSkill.skillId &&
+            entry.role !== userSkill.role;
     }
 
     private matchClients (client: WebSocket, waitingClient: WebSocket) {
