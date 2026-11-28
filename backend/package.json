@@ -13,13 +13,22 @@
     "start": "node dist/main.js",
     "start:prod": "node dist/main.js",
     "typecheck": "tsc --noEmit -p tsconfig.test.json",
-    "test:build": "tsc -p tsconfig.test.json",
-    "test": "npm run test:build && node --test .test-dist/src/*.spec.js .test-dist/test/*.e2e-spec.js",
+    "test:build": "node -e \"require('node:fs').rmSync('.test-dist', { recursive: true, force: true })\" && tsc -p tsconfig.test.json",
+    "test": "npm run test:build && node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:e2e": "npm run test:build && node --test .test-dist/test/*.e2e-spec.js",
     "migration:generate": "npm run build && typeorm migration:generate -d dist/data-source.js",
     "migration:run": "npm run build && typeorm migration:run -d dist/data-source.js",
     "migration:revert": "npm run build && typeorm migration:revert -d dist/data-source.js",
     "migration:show": "npm run build && typeorm migration:show -d dist/data-source.js"
+  },
+  "jest": {
+    "roots": [
+      "<rootDir>/.test-dist/src"
+    ],
+    "testMatch": [
+      "**/*.spec.js"
+    ],
+    "testEnvironment": "node"
   },
   "dependencies": {
     "@nestjs/common": "^12.3.2",
@@ -52,6 +61,7 @@
     "@types/multer": "^2.3.0",
     "@types/node": "^24.19.2",
     "@types/ws": "^8.18.2",
+    "@vitest/coverage-v8": "^5.1.2",
     "jest": "^30.5.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"

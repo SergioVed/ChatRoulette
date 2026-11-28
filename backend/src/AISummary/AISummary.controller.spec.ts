@@ -1,6 +1,8 @@
+import { beforeEach, describe, expect, it } from '@jest/globals';
+import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AISummaryController } from './AISummary.controller';
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { AISummaryService } from './AISummary.service';
 
 
 describe('AISummaryController', () => {
@@ -9,6 +11,10 @@ describe('AISummaryController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AISummaryController],
+      providers: [
+        { provide: AISummaryService, useValue: {} },
+        { provide: JwtService, useValue: {} },
+      ],
     }).compile();
 
     controller = module.get<AISummaryController>(AISummaryController);
