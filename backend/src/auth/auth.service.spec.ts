@@ -1,11 +1,11 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import {AuthService} from "./auth.service";
 import {Test, TestingModule} from "@nestjs/testing";
-import {TestModule} from "vitest/node";
 import {UsersService} from "../users/users.service";
 import {JwtService} from "@nestjs/jwt";
 import {User} from "../users/user.entity";
-import {ConflictException} from "@nestjs/common";
+import {ConflictException, UnauthorizedException} from "@nestjs/common";
+import {argon2id, hash, verify} from 'argon2';
 
 describe('AuthService', () => {
 
@@ -42,6 +42,8 @@ describe('AuthService', () => {
   })
 
   describe('register', () => {
+    const credentials = {name: 'testName', email: 'user1@example.com', password: 'testPassword'}
+
     it('Should return token and onBoardingCompleted after successful register', async () => {
       // Arrange
       usersService.findByEmail.mockResolvedValue(null)
@@ -54,12 +56,17 @@ describe('AuthService', () => {
 
       // Act
       const result = await service.register({email: 'test@gmail.com', name: 'user1', password: 'testPassword'})
-
+      const hashedPassword = usersService.create.mock.calls[0][2];
       // Assert
       expect(result).toEqual({
         accessToken: 'accessToken',
         onboardingCompleted: false
       })
+      expect(hashedPassword).not.toEqual(credentials.password)
+      expect(
+          await verify(hashedPassword, credentials.password)
+      ).toBe(true);
+
       expect(usersService.findByEmail).toHaveBeenCalledWith('test@gmail.com');
       expect(usersService.create).toHaveBeenCalledTimes(1);
       expect(jwtService.signAsync).toHaveBeenCalledTimes(1);
@@ -85,6 +92,58 @@ describe('AuthService', () => {
   })
 
   describe('login', () => {
+    const credentials = {email: 'user1@example.com', password: 'testPassword'}
+    const user = {id: 'user1', email: credentials.email}
+    let passwordHash: string
 
+    beforeAll(async () => {
+      passwordHash = await hash(credentials.password, {type: argon2id})
+    })
+
+    it('Should return an access token after successful login', async () => {
+      // Arrange
+      usersService.findByEmail.mockResolvedValue({...user, passwordHash} as User)
+      jwtService.signAsync.mockResolvedValue('accessToken')
+
+      // Act
+      const result = await service.login(credentials)
+
+      // Assert
+      expect(result).toEqual({accessToken: 'accessToken'});
+      expect(usersService.findByEmail).toHaveBeenCalledWith(credentials.email);
+      expect(jwtService.signAsync).toHaveBeenCalledWith({sub: user.id});
+    })
+
+    it('Should reject login with an incorrect password', async () => {
+      // Arrange
+      usersService.findByEmail.mockResolvedValue({...user, passwordHash} as User)
+
+      // Act and assert
+      await expect(
+          service.login({...credentials, password: 'wrongPassword'})
+      ).rejects.toThrow(UnauthorizedException);
+
+      expect(jwtService.signAsync).not.toHaveBeenCalled();
+    })
+
+    it('Should reject login when the user does not exist', async () => {
+      // Arrange
+      await service.onModuleInit()
+      usersService.findByEmail.mockResolvedValue(null)
+
+      // Act and assert
+      await expect(service.login(credentials)).rejects.toThrow(UnauthorizedException);
+      expect(jwtService.signAsync).not.toHaveBeenCalled();
+    })
+
+    it('Should reject login when the user has no password hash', async () => {
+      // Arrange
+      await service.onModuleInit()
+      usersService.findByEmail.mockResolvedValue({...user, passwordHash: null} as User)
+
+      // Act and assert
+      await expect(service.login(credentials)).rejects.toThrow(UnauthorizedException);
+      expect(jwtService.signAsync).not.toHaveBeenCalled();
+    })
   })
 })
