@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { User } from './user.entity';
 import { UsersService } from './users.service';
 
@@ -10,10 +10,10 @@ describe('UsersService', () => {
   let service: UsersService;
 
   const repository = {
-    findOne: vi.fn(),
-    create: vi.fn<(fields: Pick<User, 'name' | 'email' | 'passwordHash'>) => User>(),
-    save: vi.fn<(user: User) => Promise<User>>(),
-    update: vi.fn(),
+    findOne: jest.fn<() => Promise<User | null>>(),
+    create: jest.fn<(fields: Pick<User, 'name' | 'email' | 'passwordHash'>) => User>(),
+    save: jest.fn<(user: User) => Promise<User>>(),
+    update: jest.fn<() => Promise<{ affected: number }>>(),
   };
 
   function userFixture(): User {
@@ -27,7 +27,7 @@ describe('UsersService', () => {
   }
 
   beforeEach(async () => {
-    vi.resetAllMocks();
+    jest.resetAllMocks();
     repository.findOne.mockResolvedValue(null)
 
     module = await Test.createTestingModule({
@@ -50,7 +50,7 @@ describe('UsersService', () => {
 
       await expect(service.findByEmail(' TEST@example.com ')).resolves.toBe(user);
 
-      expect(repository.findOne).toHaveBeenCalledOnce();
+      expect(repository.findOne).toHaveBeenCalledTimes(1);
     });
 
     it('returns null when no user exists', async () => {
@@ -73,10 +73,10 @@ describe('UsersService', () => {
       repository.findOne.mockResolvedValue(user);
 
       await expect(service.completeOnBoarding(user.id)).resolves.toBe(user);
-      expect(repository.update).toHaveBeenCalledExactlyOnceWith(
+      expect(repository.update.mock.calls).toEqual([[
         { id: user.id }, { onboardingCompleted: true },
-      );
-      expect(repository.findOne).toHaveBeenCalledExactlyOnceWith({ where: { id: user.id } });
+      ]]);
+      expect(repository.findOne.mock.calls).toEqual([[{ where: { id: user.id } }]]);
     });
 
     it('rejects a missing user', async () => {
@@ -106,10 +106,10 @@ describe('UsersService', () => {
 
       await expect(service.create(entity.name, entity.email, entity.passwordHash!))
         .resolves.toBe(savedUser);
-      expect(repository.create).toHaveBeenCalledExactlyOnceWith({
+      expect(repository.create.mock.calls).toEqual([[{
         name: 'Test', email: 'test@example.com', passwordHash: 'supplied-hash',
-      });
-      expect(repository.save).toHaveBeenCalledExactlyOnceWith(entity);
+      }]]);
+      expect(repository.save.mock.calls).toEqual([[entity]]);
       expect(repository.save.mock.calls[0][0]).toBe(entity);
     });
 

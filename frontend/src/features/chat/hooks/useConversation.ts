@@ -318,20 +318,6 @@ export function useConversation (localStream: MediaStream | null) {
         setConversationState(ConversationState.SEARCHING)
     }
 
-    // async function testDisc(){
-    //     const transport = socket.current
-    //     if (!transport) {
-    //         throw new Error('Transport is null')
-    //     }
-    //
-    //     replacePeerConnection()
-    //
-    //     transport.sendMessage({
-    //         event: EventType.TEST_DISC,
-    //     })
-    // }
-
-
     return {
         remoteStream,
         connectionState,

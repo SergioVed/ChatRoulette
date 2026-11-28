@@ -93,7 +93,7 @@ Run these commands from the repository root:
 | Frontend development | npm --prefix frontend run dev |
 | Backend build | npm --prefix backend run build |
 | Backend typecheck | npm --prefix backend run typecheck |
-| Backend tests | npm --prefix backend test |
+| Backend unit tests (Jest) | npm --prefix backend test |
 | Backend e2e | npm --prefix backend run test:e2e |
 | Frontend build | npm --prefix frontend run build |
 | Frontend lint | npm --prefix frontend run lint |
@@ -102,12 +102,11 @@ Run these commands from the repository root:
 Package scripts are authoritative. Frontend lint uses Oxlint.
 There is no frontend test script or backend lint script.
 
-Existing backend test limitations:
-- The test script uses Node's runner and a shallow unit-test glob, while
-  nested source specs import Jest or Vitest.
-- The e2e test expects an unregistered Hello World route and requires
-  backend environment configuration and PostgreSQL.
-  Do not report complete unit coverage from the current test command.
+Backend unit tests require Node 24.9+ so Jest can load NestJS ES modules
+from compiled CommonJS tests. Run a single suite with
+`npm --prefix backend test -- chat.service.spec`.
+The separate e2e test uses Node's runner, expects an unregistered Hello World
+route, and requires backend environment configuration and PostgreSQL.
 
 ## Environment and Docker
 

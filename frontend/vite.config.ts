@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => ({
       },
     },
     allowedHosts: [
-      'paid-colleges-nickel-gibson.trycloudflare.com',
+      'colours-bid-jesse-mailto.trycloudflare.com',
     ],
   },
 }))

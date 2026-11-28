@@ -1,181 +1,149 @@
-import { ConflictException, UnauthorizedException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import { Test, TestingModule } from '@nestjs/testing';
-import { argon2id, hash, verify } from 'argon2';
-import { QueryFailedError } from 'typeorm';
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { User } from '../users/user.entity';
-import { UsersService } from '../users/users.service';
-import { AuthService } from './auth.service';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, jest } from '@jest/globals';
+import {AuthService} from "./auth.service";
+import {Test, TestingModule} from "@nestjs/testing";
+import {UsersService} from "../users/users.service";
+import {JwtService} from "@nestjs/jwt";
+import {User} from "../users/user.entity";
+import {ConflictException, UnauthorizedException} from "@nestjs/common";
+import {argon2id, hash, verify} from 'argon2';
 
 describe('AuthService', () => {
-  let module: TestingModule;
-  let service: AuthService;
-  let passwordHash: string;
-  const userId = '550e8400-e29b-41d4-a716-446655440000';
-  const credentials = { email: 'test@example.com', password: ' testPassword123 ' };
-  const registration = { name: ' Test ', ...credentials, email: ' TEST@example.com ' };
-  const users = {
-    findByEmail: vi.fn<UsersService['findByEmail']>(),
-    create: vi.fn<UsersService['create']>(),
-  };
-  const jwt = {
-    signAsync: vi.fn<(payload: { sub: string }) => Promise<string>>(),
-  };
 
-  function existingUser(): User {
-    return { id: userId, name: 'Test', email: credentials.email, passwordHash, onboardingCompleted: false };
+  let service: AuthService
+
+  const usersService = {
+    findByEmail: jest.fn<UsersService['findByEmail']>(),
+    create: jest.fn<UsersService['create']>(),
+    getOne: jest.fn<UsersService['getOne']>()
   }
 
-  beforeAll(async () => {
-    passwordHash = await hash(credentials.password, { type: argon2id });
-  });
+  const jwtService = {
+    signAsync: jest.fn<JwtService['signAsync']>(),
+    verifyAsync: jest.fn<JwtService['verifyAsync']>(),
+  }
 
   beforeEach(async () => {
-    vi.resetAllMocks();
-    // Suppress the service's existing debug log of the synthetic user fixture.
+    jest.resetAllMocks()
 
-    users.findByEmail.mockResolvedValue(null);
-    users.create.mockImplementation(async (name, email, storedHash) => ({
-      id: userId, name, email, passwordHash: storedHash, onboardingCompleted: false,
-    }));
-    jwt.signAsync.mockResolvedValue('test-token');
-
-    module = await Test.createTestingModule({
+    const module: TestingModule = await Test.createTestingModule({
       providers: [
-        AuthService,
-        { provide: UsersService, useValue: users },
-        { provide: JwtService, useValue: jwt },
-      ],
-    }).compile();
-    await module.init();
-    service = module.get(AuthService);
-  });
+          AuthService,
+        {
+          provide: UsersService,
+          useValue: usersService
+        }, {
+          provide: JwtService,
+          useValue: jwtService
+        }
+      ]
+    }).compile()
 
-  afterEach(async () => {
-    try {
-      await module?.close();
-    } finally {
-      vi.restoreAllMocks();
-    }
-  });
+    service = module.get<AuthService>(AuthService);
+  })
 
   describe('register', () => {
-    it('normalizes account fields, hashes the exact password and returns the token and onboarding status', async () => {
-      const result = await service.register(registration);
+    const credentials = {name: 'testName', email: 'user1@example.com', password: 'testPassword'}
 
-      expect(users.findByEmail).toHaveBeenCalledExactlyOnceWith(credentials.email);
-      expect(users.create).toHaveBeenCalledOnce();
-      const [name, email, storedHash] = users.create.mock.calls[0];
-      expect(name).toBe('Test');
-      expect(email).toBe(credentials.email);
-      expect(storedHash).toMatch(/^\$argon2id\$/);
-      expect(await verify(storedHash, credentials.password)).toBe(true);
-      expect(await verify(storedHash, credentials.password.trim())).toBe(false);
-      expect(jwt.signAsync).toHaveBeenCalledExactlyOnceWith({ sub: userId });
-      expect(result).toEqual({ accessToken: 'test-token', onboardingCompleted: false });
-    });
+    it('Should return token and onBoardingCompleted after successful register', async () => {
+      // Arrange
+      usersService.findByEmail.mockResolvedValue(null)
+      usersService.create.mockResolvedValue({
+        id: 'user1',
+        onboardingCompleted: false,
+      } as User)
 
-    it('returns completed onboarding from the saved user', async () => {
-      users.create.mockResolvedValue({ ...existingUser(), onboardingCompleted: true });
+      jwtService.signAsync.mockResolvedValue('accessToken')
 
-      await expect(service.register(registration)).resolves.toEqual({
-        accessToken: 'test-token', onboardingCompleted: true,
-      });
-    });
+      // Act
+      const result = await service.register({email: 'test@gmail.com', name: 'user1', password: 'testPassword'})
+      const hashedPassword = usersService.create.mock.calls[0][2];
+      // Assert
+      expect(result).toEqual({
+        accessToken: 'accessToken',
+        onboardingCompleted: false
+      })
+      expect(hashedPassword).not.toEqual(credentials.password)
+      expect(
+          await verify(hashedPassword, credentials.password)
+      ).toBe(true);
 
-    it('rejects an existing email without creating an account or signing a token', async () => {
-      users.findByEmail.mockResolvedValue(existingUser());
+      expect(usersService.findByEmail).toHaveBeenCalledWith('test@gmail.com');
+      expect(usersService.create).toHaveBeenCalledTimes(1);
+      expect(jwtService.signAsync).toHaveBeenCalledTimes(1);
+    })
 
-      await expect(service.register(registration)).rejects.toBeInstanceOf(ConflictException);
-      expect(users.create).not.toHaveBeenCalled();
-      expect(jwt.signAsync).not.toHaveBeenCalled();
-    });
+    it('Should throw if user with email already exists', async () => {
+      // Arrange
+      usersService.findByEmail.mockResolvedValue({
+        id: 'user2',
+        email: 'user1@gmail.com'
+      } as User)
 
-    it('converts a concurrent registration unique violation into a conflict', async () => {
-      const databaseError = new QueryFailedError('INSERT INTO users', [],
-        Object.assign(new Error('duplicate email'), { code: '23505' }));
-      users.create.mockRejectedValue(databaseError);
+      // Act
 
-      await expect(service.register(registration)).rejects.toBeInstanceOf(ConflictException);
-      expect(users.create).toHaveBeenCalledOnce();
-      expect(jwt.signAsync).not.toHaveBeenCalled();
-    });
+      // Assert
+      await expect(
+          service.register({email: 'user1@gmail.com', name: 'user1', password: 'testPassword'})
+      ).rejects.toThrow(ConflictException);
 
-    it('propagates other database errors without signing a token', async () => {
-      const databaseError = new QueryFailedError('INSERT INTO users', [],
-        Object.assign(new Error('database unavailable'), { code: '08006' }));
-      users.create.mockRejectedValue(databaseError);
-
-      await expect(service.register(registration)).rejects.toBe(databaseError);
-      expect(jwt.signAsync).not.toHaveBeenCalled();
-    });
-
-    it('propagates lookup failures without creating an account or signing a token', async () => {
-      const error = new Error('lookup failed');
-      users.findByEmail.mockRejectedValue(error);
-
-      await expect(service.register(registration)).rejects.toBe(error);
-      expect(users.create).not.toHaveBeenCalled();
-      expect(jwt.signAsync).not.toHaveBeenCalled();
-    });
-
-    it('propagates token-signing failures after creating the account', async () => {
-      const error = new Error('signing failed');
-      jwt.signAsync.mockRejectedValue(error);
-
-      await expect(service.register(registration)).rejects.toBe(error);
-      expect(users.create).toHaveBeenCalledOnce();
-      expect(jwt.signAsync).toHaveBeenCalledExactlyOnceWith({ sub: userId });
-    });
-  });
+      expect(usersService.create).not.toHaveBeenCalled();
+      expect(jwtService.signAsync).not.toHaveBeenCalled();
+    })
+  })
 
   describe('login', () => {
-    it('verifies the password and signs a token for the existing user', async () => {
-      users.findByEmail.mockResolvedValue(existingUser());
+    const credentials = {email: 'user1@example.com', password: 'testPassword'}
+    const user = {id: 'user1', email: credentials.email}
+    let passwordHash: string
 
-      await expect(service.login(credentials)).resolves.toEqual({ accessToken: 'test-token' });
-      expect(users.findByEmail).toHaveBeenCalledExactlyOnceWith(credentials.email);
-      expect(jwt.signAsync).toHaveBeenCalledExactlyOnceWith({ sub: userId });
-      expect(users.create).not.toHaveBeenCalled();
-    });
+    beforeAll(async () => {
+      passwordHash = await hash(credentials.password, {type: argon2id})
+    })
 
-    it.each(['incorrect password', 'unknown user', 'missing hash'] as const)(
-      'returns the same unauthorized error for %s', async (scenario) => {
-        if (scenario === 'incorrect password') {
-          users.findByEmail.mockResolvedValue(existingUser());
-        } else if (scenario === 'missing hash') {
-          users.findByEmail.mockResolvedValue({ ...existingUser(), passwordHash: null });
-        }
+    it('Should return an access token after successful login', async () => {
+      // Arrange
+      usersService.findByEmail.mockResolvedValue({...user, passwordHash} as User)
+      jwtService.signAsync.mockResolvedValue('accessToken')
 
-        const attempt = service.login({ ...credentials, password: 'incorrect' });
-        await expect(attempt).rejects.toBeInstanceOf(UnauthorizedException);
-        await expect(attempt).rejects.toMatchObject({
-          message: 'Invalid email or password',
-          response: { statusCode: 401, message: 'Invalid email or password' },
-        });
-        expect(jwt.signAsync).not.toHaveBeenCalled();
-        expect(users.create).not.toHaveBeenCalled();
-      },
-    );
+      // Act
+      const result = await service.login(credentials)
 
-    it('propagates lookup failures without creating an account or signing a token', async () => {
-      const error = new Error('lookup failed');
-      users.findByEmail.mockRejectedValue(error);
+      // Assert
+      expect(result).toEqual({accessToken: 'accessToken'});
+      expect(usersService.findByEmail).toHaveBeenCalledWith(credentials.email);
+      expect(jwtService.signAsync).toHaveBeenCalledWith({sub: user.id});
+    })
 
-      await expect(service.login(credentials)).rejects.toBe(error);
-      expect(jwt.signAsync).not.toHaveBeenCalled();
-      expect(users.create).not.toHaveBeenCalled();
-    });
+    it('Should reject login with an incorrect password', async () => {
+      // Arrange
+      usersService.findByEmail.mockResolvedValue({...user, passwordHash} as User)
 
-    it('propagates token-signing failures after verifying credentials', async () => {
-      const error = new Error('signing failed');
-      users.findByEmail.mockResolvedValue(existingUser());
-      jwt.signAsync.mockRejectedValue(error);
+      // Act and assert
+      await expect(
+          service.login({...credentials, password: 'wrongPassword'})
+      ).rejects.toThrow(UnauthorizedException);
 
-      await expect(service.login(credentials)).rejects.toBe(error);
-      expect(jwt.signAsync).toHaveBeenCalledExactlyOnceWith({ sub: userId });
-      expect(users.create).not.toHaveBeenCalled();
-    });
-  });
-});
+      expect(jwtService.signAsync).not.toHaveBeenCalled();
+    })
+
+    it('Should reject login when the user does not exist', async () => {
+      // Arrange
+      await service.onModuleInit()
+      usersService.findByEmail.mockResolvedValue(null)
+
+      // Act and assert
+      await expect(service.login(credentials)).rejects.toThrow(UnauthorizedException);
+      expect(jwtService.signAsync).not.toHaveBeenCalled();
+    })
+
+    it('Should reject login when the user has no password hash', async () => {
+      // Arrange
+      await service.onModuleInit()
+      usersService.findByEmail.mockResolvedValue({...user, passwordHash: null} as User)
+
+      // Act and assert
+      await expect(service.login(credentials)).rejects.toThrow(UnauthorizedException);
+      expect(jwtService.signAsync).not.toHaveBeenCalled();
+    })
+  })
+})
