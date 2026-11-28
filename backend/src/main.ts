@@ -17,7 +17,7 @@ async function start() {
   )
 
     app.enableCors({
-        origin: ['http://localhost:5173', 'https://paid-colleges-nickel-gibson.trycloudflare.com'],
+        origin: ['http://localhost:5173', 'https://colours-bid-jesse-mailto.trycloudflare.com'],
         methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
         credentials: true,
     });
